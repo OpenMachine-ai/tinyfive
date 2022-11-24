@@ -5,16 +5,16 @@ from model import *
 #  2) assembly code without any branch instructions
 #  3) assembly code with branch instructions
 
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # golden reference: add two 16-element vectors using numpy
-#------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 np.random.seed(5)  # fix seed for reproducible results
 a = np.random.randint(-1 << 31, (1 << 31)-1, size=16, dtype=np.int32)
 b = np.random.randint(-1 << 31, (1 << 31)-1, size=16, dtype=np.int32)
 c_gold = a + b
 
 #-------------------------------------------------------------------------------
-# 1st way: pseudo-assembly using the upper-case instructions (such as 'ADD')
+# 1) pseudo-assembly code using the upper-case instructions (such as 'ADD')
 #-------------------------------------------------------------------------------
 
 # memory map: each 32-bit value occupies 4 byte addresses in mem
@@ -41,7 +41,7 @@ c_way1 = read_i32_vec(s, 16, 4*32)
 print(c_gold - c_way1)
 
 #-------------------------------------------------------------------------------
-# 2nd way: assembly code without any branch instructions
+# 2) assembly code without any branch instructions
 #-------------------------------------------------------------------------------
 clear_mem(s, start=4*32)
 clear_cpu(s)
@@ -62,7 +62,7 @@ c_way2 = read_i32_vec(s, 16, 4*32)
 print(c_gold - c_way2)
 
 #-------------------------------------------------------------------------------
-# 3rd way: assembly code with branch instructions
+# 3) assembly code with branch instructions
 #-------------------------------------------------------------------------------
 clear_mem(s, start=4*32)
 clear_cpu(s)
