@@ -37,7 +37,7 @@ python3 tests.py
 ```
 
 ### Latest status
-- 37 of the 40 base instructions `RV32I` and all 8 instructions of the `RV32M` extension
+- 37 of the 40 base instructions `RV32I` and all 8 instructions of the M-extension `RV32M`
   are implemented, and many of them are tested. (The three missing instructions `fence`,
   `ebreak`, and `ecall` are really not applicable for TinyFive).
 - Remaining work: improve testing, add extensions F and V, add RV64. See TODOs in
