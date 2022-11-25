@@ -89,9 +89,26 @@ def SW(s, rs2, imm, rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  s.pc += 4; \
                           s.mem[s.x[rs1] + imm + 2] = (s.x[rs2] >> 16) & 0xff; \
                           s.mem[s.x[rs1] + imm + 3] = (s.x[rs2] >> 24) & 0xff
 
+# rv32M extension
+def _muls(a, b): return np.multiply(  a,    b,  dtype=np.int64)
+def _mulu(a, b): return np.multiply(u(a), u(b), dtype=np.uint64)
+def MUL   (s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2]);        s.pc += 4
+def MULH  (s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2])  >> 32; s.pc += 4
+def MULHSU(s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],u(s.x[rs2])) >> 32; s.pc += 4
+def MULHU (s, rd, rs1, rs2): s.x[rd] = _mulu(s.x[rs1],s.x[rs2]) >> u(32); s.pc += 4
+# TODO: why is Python integer division '//' and remainder '%' not exactly the same
+# as RISC-V 'div' and 'rem'? # For efficient mapping of Python code to RISC-V,
+# these basic instructions should be exactly the same
+def _div(a, b): return np.fix(a/b).astype(int)
+def _rem(a, b): return a - b * _div(a, b)
+def DIV   (s, rd, rs1, rs2): s.x[rd] = _div(  s.x[rs1],   s.x[rs2]);  s.pc += 4
+def DIVU  (s, rd, rs1, rs2): s.x[rd] = _div(u(s.x[rs1]),u(s.x[rs2])); s.pc += 4
+def REM   (s, rd, rs1, rs2): s.x[rd] = _rem(  s.x[rs1],   s.x[rs2]);  s.pc += 4
+def REMU  (s, rd, rs1, rs2): s.x[rd] = _rem(u(s.x[rs1]),u(s.x[rs2])); s.pc += 4
+
 # TODOs:
-#  - implement missing instructions FENCE, ECALL, EBREAK
-#  - add ISA extensions M and F
+#  - add ISA extensions F and V perhaps
+#  - the 3 missing instructions FENCE, ECALL, EBREAK are not really needed here
 #  - add a check for writing to x[0], which is a known issue here
 
 #-------------------------------------------------------------------------------
@@ -210,6 +227,17 @@ def dec(inst):
   elif f7_f3_ == '0100000_101_0110011': SRA (s, rd, rs1, rs2)
   elif f7_f3_ == '0000000_110_0110011': OR  (s, rd, rs1, rs2)
   elif f7_f3_ == '0000000_111_0110011': AND (s, rd, rs1, rs2)
+
+  # M extension
+  elif f7_f3_ == '0000001_000_0110011': MUL   (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_001_0110011': MULH  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_010_0110011': MULHSU(s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_011_0110011': MULHU (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_100_0110011': DIV   (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_101_0110011': DIVU  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_110_0110011': REM   (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000001_111_0110011': REMU  (s, rd, rs1, rs2)
+
   else:
     print('ERROR: this instruction is not supported: ' + str(inst))
 
@@ -222,6 +250,10 @@ def r_type(f7, f3, opcode, rd, rs1, rs2):
 
 def i_type(f3, opcode, rd, rs1, imm):
   return pack('int:12, uint:5, bin:3, uint:5, bin:7', imm, rs1, f3, rd, opcode)
+
+def i_ty_u(f3, opcode, rd, rs1, imm):
+  """same as i_type, but imm is unsigned (only needed for sltiu)"""
+  return pack('uint:12, uint:5, bin:3, uint:5, bin:7', imm, rs1, f3, rd, opcode)
 
 def s_type(f3, opcode, rs2, imm, rs1):
   im = Bits(int=imm, length=12)
@@ -251,6 +283,10 @@ def j_type(opcode, rd, imm):
   return pack('uint:1, uint:10, uint:1, uint:8, uint:5, bin:7',
               imm20, imm10_1, imm11, imm19_12, rd, opcode)
 
+# TODO: consider rewriting the bitstring packing/unpacking code, there
+# is perhaps a better way than bitstring (numpy's 'packbits' only works
+# on uint8)
+
 def enc(s, inst, arg1, arg2, arg3=0):
   """encode instruction and write into mem[]"""
   if   inst == 'lui'  : st = u_type('0110111', arg1, arg2)
@@ -278,7 +314,7 @@ def enc(s, inst, arg1, arg2, arg3=0):
 
   elif inst == 'addi' : st = i_type('000', '0010011', arg1, arg2, arg3)
   elif inst == 'slti' : st = i_type('010', '0010011', arg1, arg2, arg3)
-  elif inst == 'sltiu': st = i_type('011', '0010011', arg1, arg2, arg3)
+  elif inst == 'sltiu': st = i_ty_u('011', '0010011', arg1, arg2, arg3)
   elif inst == 'xori' : st = i_type('100', '0010011', arg1, arg2, arg3)
   elif inst == 'ori'  : st = i_type('110', '0010011', arg1, arg2, arg3)
   elif inst == 'andi' : st = i_type('111', '0010011', arg1, arg2, arg3)
@@ -298,6 +334,17 @@ def enc(s, inst, arg1, arg2, arg3=0):
   elif inst == 'sra' : st = r_type('0100000', '101', '0110011', arg1, arg2, arg3)
   elif inst == 'or'  : st = r_type('0000000', '110', '0110011', arg1, arg2, arg3)
   elif inst == 'and' : st = r_type('0000000', '111', '0110011', arg1, arg2, arg3)
+
+  # M extension
+  elif inst == 'mul'   : st = r_type('0000001', '000', '0110011', arg1, arg2, arg3)
+  elif inst == 'mulh'  : st = r_type('0000001', '001', '0110011', arg1, arg2, arg3)
+  elif inst == 'mulhsu': st = r_type('0000001', '010', '0110011', arg1, arg2, arg3)
+  elif inst == 'mulhu' : st = r_type('0000001', '011', '0110011', arg1, arg2, arg3)
+  elif inst == 'div'   : st = r_type('0000001', '100', '0110011', arg1, arg2, arg3)
+  elif inst == 'divu'  : st = r_type('0000001', '101', '0110011', arg1, arg2, arg3)
+  elif inst == 'rem'   : st = r_type('0000001', '110', '0110011', arg1, arg2, arg3)
+  elif inst == 'remu'  : st = r_type('0000001', '111', '0110011', arg1, arg2, arg3)
+
   else:
     print('ERROR: this instruction is not supported ' + inst)
 
