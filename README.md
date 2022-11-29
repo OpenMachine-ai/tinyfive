@@ -48,7 +48,7 @@ python3 tests.py
 
 ### Tiny Tech promise
 Similar to [tinygrad](https://github.com/geohot/tinygrad), 
-[micorgrad](https://github.com/karpathy/micrograd) and other “tiny tech” projects,
+[microrgrad](https://github.com/karpathy/micrograd) and other “tiny tech” projects,
 we believe that core technology should be simple and small (in terms of
 [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure
 that the core of TinyFive (without tests and examples) will always be below 1000 lines.
