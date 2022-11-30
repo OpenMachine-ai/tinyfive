@@ -45,10 +45,21 @@ python3 tests.py
   `ebreak`, and `ecall` are really not applicable for TinyFive).
 - Remaining work: improve testing, add extensions F and V, add RV64. See TODOs in
   the code for more details.
+  
+### Comparison
+The table below compares TinyFive with other ISS projects.
+
+| ISS | Author | Language | Mature? | Extensions | LOC | 
+| --- | ------ | -------- | ------- | ---------- | --- |
+| [TinyFive](https://github.com/OpenMachine-ai/tinyfive)             | OpenMachine        | Python | No               | I, M                | < 1k |
+| [Pydgin](https://github.com/cornell-brg/pydgin)                    | Cornell University | Python | Last update 2016 | A, D, F, I, M       | |
+| [Spike](https://github.com/riscv-software-src/riscv-isa-sim)       | UC Berkeley        | C, C++ | Yes              | All                 | | 
+| [riscvOVPsim](https://github.com/riscv-ovpsim/imperas-riscv-tests) | Imperas            | C      | Yes              | All                 | |
+| [Whisper](https://github.com/chipsalliance/SweRV-ISS)              | Western Digital    | C, C++ | Yes | A, B, C, D, F, I, M, S, U, V, Z* | |
 
 ### Tiny Tech promise
 Similar to [tinygrad](https://github.com/geohot/tinygrad), 
-[micrograd](https://github.com/karpathy/micrograd) and other “tiny tech” projects,
+[micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects,
 we believe that core technology should be simple and small (in terms of
 [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure
 that the core of TinyFive (without tests and examples) will always be below 1000 lines.
