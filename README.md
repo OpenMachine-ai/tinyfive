@@ -60,8 +60,8 @@ The table below compares TinyFive with other ISS projects.
 
 ### References
 - [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
-- Brief description of RISC-V instructions See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf)
- for a brief description of most instructions
+- See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf)
+ for a brief description of most instructions.
 - Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman
 (2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions.
 The Spanish version of this book is
