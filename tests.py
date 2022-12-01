@@ -1,4 +1,4 @@
-from model import *
+from tinyfive import *
 
 # this file performs the following tests:
 #   1) ALU instruction tests (arithmetic, logic, shift) derived from the
@@ -682,13 +682,13 @@ print('ALU-tests errors: ' + str(err))
 #-------------------------------------------------------------------------------
 # some basic tests for load/store instructions
 #-------------------------------------------------------------------------------
-s.mem[7]  = -7;  s.mem[8]  = -8; s.mem[9]  = -9; s.mem[10] = 10
-s.mem[11] = -11; s.mem[12] = 12; s.mem[13] = 13; s.x[9] = 9
-LB(s, 1, -1, 9);  print(s.x[1])
-LBU(s, 1, -1, 9); print(s.x[1])
-LH(s, 1, 1, 9);   print(s.x[1]); print(10 - 256*11)
-s.x[2] = -1023
-SH(s, 2, 1, 9); print(s.mem[10]); print(i8(s.mem[11]))
+#s.mem[7]  = -7;  s.mem[8]  = -8; s.mem[9]  = -9; s.mem[10] = 10
+#s.mem[11] = -11; s.mem[12] = 12; s.mem[13] = 13; s.x[9] = 9
+#LB(s, 1, -1, 9);  print(s.x[1])
+#LBU(s, 1, -1, 9); print(s.x[1])
+#LH(s, 1, 1, 9);   print(s.x[1]); print(10 - 256*11)
+#s.x[2] = -1023
+#SH(s, 2, 1, 9); print(s.mem[10]); print(i8(s.mem[11]))
 # TODO: improve these tests, they should be self-checking; or just replace them
 # by the official RISC-V test-suite
 

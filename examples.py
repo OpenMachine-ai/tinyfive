@@ -1,4 +1,4 @@
-from model import *
+from tinyfive import *
 
 # This file shows 3 ways to add two 16-element vectors (elements are INT32):
 #  1) pseudo-assembly code using the upper-case instructions (such as 'ADD')

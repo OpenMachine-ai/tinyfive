@@ -1,10 +1,14 @@
 import numpy as np
 from bitstring import Bits, pack
 
-# sources
-# https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf
-# RISC-V book
-# https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf
+# This file is divided into two parts:
+#   1. Part I defines all state and instructions of RISC-V (without bit-encodings)
+#   2. Part II implements encoding and decoding functions around the instructions
+#      defined in part I
+
+#-------------------------------------------------------------------------------
+# Part I
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # create state of CPU: memory 'mem[]', register file 'x[]', program counter 'pc'
@@ -18,7 +22,7 @@ s.x   = np.zeros(32,       dtype=np.int32) # register file 'x[]' is signed int32
 s.pc  = 0
 
 #-------------------------------------------------------------------------------
-# RV32 instructions
+# Base instructions (RV32I)
 #-------------------------------------------------------------------------------
 def i32(x): return np.int32(x)   # convert to 32-bit signed
 def i8(x):  return np.int8(x)    # convert to 8-bit signed
@@ -89,7 +93,14 @@ def SW(s, rs2, imm, rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  s.pc += 4; \
                           s.mem[s.x[rs1] + imm + 2] = (s.x[rs2] >> 16) & 0xff; \
                           s.mem[s.x[rs1] + imm + 3] = (s.x[rs2] >> 24) & 0xff
 
-# rv32M extension
+# TODOs:
+#  - add ISA extension F
+#  - the 3 missing instructions FENCE, ECALL, EBREAK are not really needed here
+#  - add a check for writing to x[0], which is a known issue here
+
+#-------------------------------------------------------------------------------
+# M-extension (RV32M)
+#-------------------------------------------------------------------------------
 def _muls(a, b): return np.multiply(  a,    b,  dtype=np.int64)
 def _mulu(a, b): return np.multiply(u(a), u(b), dtype=np.uint64)
 def MUL   (s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2]);        s.pc += 4
@@ -106,10 +117,9 @@ def DIVU  (s, rd, rs1, rs2): s.x[rd] = _div(u(s.x[rs1]),u(s.x[rs2])); s.pc += 4
 def REM   (s, rd, rs1, rs2): s.x[rd] = _rem(  s.x[rs1],   s.x[rs2]);  s.pc += 4
 def REMU  (s, rd, rs1, rs2): s.x[rd] = _rem(u(s.x[rs1]),u(s.x[rs2])); s.pc += 4
 
-# TODOs:
-#  - add ISA extensions F and V perhaps
-#  - the 3 missing instructions FENCE, ECALL, EBREAK are not really needed here
-#  - add a check for writing to x[0], which is a known issue here
+#-------------------------------------------------------------------------------
+# Part II
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # useful functions for accessing state and memory
