@@ -59,9 +59,10 @@ The table below compares TinyFive with other ISS projects.
 | [Sail Model](https://github.com/riscv/sail-riscv)                  | Cambridge, Edinburgh | Sail, C   | Yes | All                              | |
 
 ### References
-- [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
+- Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf)
- for a brief description of most instructions.
+ for a brief description of most instructions. See also the 
+ [RISC-V greencard](http://riscvbook.com/greencard-20181213.pdf).
 - Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman
 (2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions.
 The Spanish version of this book is
