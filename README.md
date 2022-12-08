@@ -44,7 +44,7 @@ python3 tests.py
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
 - 37 of the 40 base instructions `RV32I` and all 8 instructions of the M-extension `RV32M`
   are implemented, and many of them are tested. (The three missing instructions `fence`,
-  `ebreak`, and `ecall` are really not applicable for TinyFive).
+  `ebreak`, and `ecall` are not applicable here).
 - Remaining work: improve testing, add extensions F and V, add RV64. See TODOs in
   the code for more details.
 
@@ -60,7 +60,7 @@ The table below compares TinyFive with other ISS projects.
 | [Whisper](https://github.com/chipsalliance/SweRV-ISS)              | Western Digital      | C, C++    | Yes | Almost all                 | |
 | [Sail Model](https://github.com/riscv/sail-riscv)                  | Cambridge, Edinburgh | Sail, C   | Yes | All                        | |
 | [PiMaker/rvc](https://github.com/PiMaker/rvc)                      | PiMaker              | C         |  ?  |                            | |
-| [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | cnlohr               | C         |  ?  | A, I, M, Zifencei, Zicsr   | < 1k | 
+| [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |  ?  | A, I, M, Zifencei, Zicsr   | < 1k | 
 
 ### References
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
