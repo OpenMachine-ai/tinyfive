@@ -5,6 +5,8 @@ from bitstring import Bits, pack
 #   1. Part I defines all state and instructions of RISC-V (without bit-encodings)
 #   2. Part II implements encoding and decoding functions around the instructions
 #      defined in part I
+# Part I is sufficient for emulating RISC-V. Part II is only needed if you want
+# to emulate the instruction encoding of RISC-V.
 
 #-------------------------------------------------------------------------------
 # Part I
@@ -17,105 +19,130 @@ class State(object): pass
 s = State()
 
 mem_size = 1000  # size of memory in bytes
-s.mem = np.zeros(mem_size, dtype=np.uint8) # memory 'mem[]' is unsigned int8
-s.x   = np.zeros(32,       dtype=np.int32) # register file 'x[]' is signed int32
+s.mem = np.zeros(mem_size, dtype=np.uint8)  # memory 'mem[]' is unsigned int8
+s.x   = np.zeros(32, dtype=np.int32)    # register file 'x[]' is signed int32
 s.pc  = 0
 
 #-------------------------------------------------------------------------------
 # Base instructions (RV32I)
 #-------------------------------------------------------------------------------
-def i32(x): return np.int32(x)   # convert to 32-bit signed
-def i8(x):  return np.int8(x)    # convert to 8-bit signed
-def u(x):   return np.uint32(x)  # convert to 32-bit unsigned
+def _i8(x): return np.int8(x)    # convert to 8-bit signed
+def _u(x):  return np.uint32(x)  # convert to 32-bit unsigned
+
+# increment pc by 4 and make sure that x[0] is always 0
+def _pc(s):
+  s.x[0] = 0
+  s.pc += 4
 
 # arithmetic
-def ADD (s, rd, rs1, rs2): s.x[rd] = s.x[rs1] + s.x[rs2]; s.pc += 4
-def ADDI(s, rd, rs1, imm): s.x[rd] = s.x[rs1] + imm;      s.pc += 4
-def SUB (s, rd, rs1, rs2): s.x[rd] = s.x[rs1] - s.x[rs2]; s.pc += 4
+def ADD (s,rd,rs1,rs2): s.x[rd] = s.x[rs1] + s.x[rs2]; _pc(s)
+def ADDI(s,rd,rs1,imm): s.x[rd] = s.x[rs1] + imm;      _pc(s)
+def SUB (s,rd,rs1,rs2): s.x[rd] = s.x[rs1] - s.x[rs2]; _pc(s)
 
 # bitwise logical
-def XOR (s, rd, rs1, rs2): s.x[rd] = s.x[rs1] ^ s.x[rs2]; s.pc += 4
-def XORI(s, rd, rs1, imm): s.x[rd] = s.x[rs1] ^ imm;      s.pc += 4
-def OR  (s, rd, rs1, rs2): s.x[rd] = s.x[rs1] | s.x[rs2]; s.pc += 4
-def ORI (s, rd, rs1, imm): s.x[rd] = s.x[rs1] | imm;      s.pc += 4
-def AND (s, rd, rs1, rs2): s.x[rd] = s.x[rs1] & s.x[rs2]; s.pc += 4
-def ANDI(s, rd, rs1, imm): s.x[rd] = s.x[rs1] & imm;      s.pc += 4
+def XOR (s,rd,rs1,rs2): s.x[rd] = s.x[rs1] ^ s.x[rs2]; _pc(s)
+def XORI(s,rd,rs1,imm): s.x[rd] = s.x[rs1] ^ imm;      _pc(s)
+def OR  (s,rd,rs1,rs2): s.x[rd] = s.x[rs1] | s.x[rs2]; _pc(s)
+def ORI (s,rd,rs1,imm): s.x[rd] = s.x[rs1] | imm;      _pc(s)
+def AND (s,rd,rs1,rs2): s.x[rd] = s.x[rs1] & s.x[rs2]; _pc(s)
+def ANDI(s,rd,rs1,imm): s.x[rd] = s.x[rs1] & imm;      _pc(s)
 
 # shift (note: 0x1f ensures that only the 5 LSBs are used as shift-amount)
 # (For rv64, we will need to use the 6 LSBs so 0x3f)
-def SLL (s, rd, rs1, rs2): s.x[rd] = s.x[rs1]    << (s.x[rs2] & 0x1f); s.pc += 4
-def SRA (s, rd, rs1, rs2): s.x[rd] = s.x[rs1]    >> (s.x[rs2] & 0x1f); s.pc += 4
-def SRL (s, rd, rs1, rs2): s.x[rd] = u(s.x[rs1]) >> (s.x[rs2] & 0x1f); s.pc += 4
-def SLLI(s, rd, rs1, imm): s.x[rd] = s.x[rs1]    << imm;               s.pc += 4
-def SRAI(s, rd, rs1, imm): s.x[rd] = s.x[rs1]    >> imm;               s.pc += 4
-def SRLI(s, rd, rs1, imm): s.x[rd] = u(s.x[rs1]) >> imm;               s.pc += 4
+def SLL (s,rd,rs1,rs2): s.x[rd] = s.x[rs1]     << (s.x[rs2] & 0x1f); _pc(s)
+def SRA (s,rd,rs1,rs2): s.x[rd] = s.x[rs1]     >> (s.x[rs2] & 0x1f); _pc(s)
+def SRL (s,rd,rs1,rs2): s.x[rd] = _u(s.x[rs1]) >> (s.x[rs2] & 0x1f); _pc(s)
+def SLLI(s,rd,rs1,imm): s.x[rd] = s.x[rs1]     << imm;               _pc(s)
+def SRAI(s,rd,rs1,imm): s.x[rd] = s.x[rs1]     >> imm;               _pc(s)
+def SRLI(s,rd,rs1,imm): s.x[rd] = _u(s.x[rs1]) >> imm;               _pc(s)
 
 # set to 1 if less than
-def SLT  (s, rd, rs1, rs2): s.x[rd] = 1 if s.x[rs1]    < s.x[rs2]    else 0; s.pc += 4
-def SLTI (s, rd, rs1, imm): s.x[rd] = 1 if s.x[rs1]    < imm         else 0; s.pc += 4
-def SLTU (s, rd, rs1, rs2): s.x[rd] = 1 if u(s.x[rs1]) < u(s.x[rs2]) else 0; s.pc += 4
-def SLTIU(s, rd, rs1, imm): s.x[rd] = 1 if u(s.x[rs1]) < u(imm)      else 0; s.pc += 4
+def SLT  (s,rd,rs1,rs2): s.x[rd] = 1 if s.x[rs1]     < s.x[rs2]     else 0; _pc(s)
+def SLTI (s,rd,rs1,imm): s.x[rd] = 1 if s.x[rs1]     < imm          else 0; _pc(s)
+def SLTU (s,rd,rs1,rs2): s.x[rd] = 1 if _u(s.x[rs1]) < _u(s.x[rs2]) else 0; _pc(s)
+def SLTIU(s,rd,rs1,imm): s.x[rd] = 1 if _u(s.x[rs1]) < _u(imm)      else 0; _pc(s)
 
 # branch
-def BEQ (s, rs1, rs2, imm): s.pc += imm if s.x[rs1] == s.x[rs2]       else 4
-def BNE (s, rs1, rs2, imm): s.pc += imm if s.x[rs1] != s.x[rs2]       else 4
-def BLT (s, rs1, rs2, imm): s.pc += imm if s.x[rs1] <  s.x[rs2]       else 4
-def BGE (s, rs1, rs2, imm): s.pc += imm if s.x[rs1] >= s.x[rs2]       else 4
-def BLTU(s, rs1, rs2, imm): s.pc += imm if u(s.x[rs1]) <  u(s.x[rs2]) else 4
-def BGEU(s, rs1, rs2, imm): s.pc += imm if u(s.x[rs1]) >= u(s.x[rs2]) else 4
+def BEQ (s,rs1,rs2,imm): s.pc += imm if s.x[rs1] == s.x[rs2]         else 4
+def BNE (s,rs1,rs2,imm): s.pc += imm if s.x[rs1] != s.x[rs2]         else 4
+def BLT (s,rs1,rs2,imm): s.pc += imm if s.x[rs1] <  s.x[rs2]         else 4
+def BGE (s,rs1,rs2,imm): s.pc += imm if s.x[rs1] >= s.x[rs2]         else 4
+def BLTU(s,rs1,rs2,imm): s.pc += imm if _u(s.x[rs1]) <  _u(s.x[rs2]) else 4
+def BGEU(s,rs1,rs2,imm): s.pc += imm if _u(s.x[rs1]) >= _u(s.x[rs2]) else 4
 
 # jump
-def JAL (s, rd, imm): s.x[rd] = s.pc + 4; s.pc += imm
-def JALR(s, rd, rs1, imm): t = s.pc + 4; s.pc = (s.x[rs1] + imm) & ~1; s.x[rd] = t
+def JAL (s,rd,imm): s.x[rd] = s.pc + 4; s.pc += imm
+def JALR(s,rd,rs1,imm): t = s.pc + 4; s.pc = (s.x[rs1] + imm) & ~1; s.x[rd] = t
 
 # load immediate
-def LUI  (s, rd, imm): s.x[rd] = imm << 12;          s.pc += 4
-def AUIPC(s, rd, imm): s.x[rd] = s.pc + (imm << 12); s.pc += 4
+def LUI  (s,rd,imm): s.x[rd] = imm << 12;          _pc(s)
+def AUIPC(s,rd,imm): s.x[rd] = s.pc + (imm << 12); _pc(s)
 
 # load, note the different argument order, example: 'lb rd, offset(rs1)'
-def LB (s, rd, imm, rs1): s.x[rd] =  i8(s.mem[s.x[rs1] + imm]);  s.pc += 4
-def LBU(s, rd, imm, rs1): s.x[rd] =     s.mem[s.x[rs1] + imm];   s.pc += 4
-def LH (s, rd, imm, rs1): s.x[rd] = (i8(s.mem[s.x[rs1] + imm + 1]) << 8) + \
-                                        s.mem[s.x[rs1] + imm];   s.pc += 4
-def LHU(s, rd, imm, rs1): s.x[rd] =    (s.mem[s.x[rs1] + imm + 1]  << 8) + \
-                                        s.mem[s.x[rs1] + imm];   s.pc += 4
-def LW (s, rd, imm, rs1): s.x[rd] = (i8(s.mem[s.x[rs1] + imm + 3]) << 24) + \
-                                       (s.mem[s.x[rs1] + imm + 2]  << 16) + \
-                                       (s.mem[s.x[rs1] + imm + 1]  << 8)  + \
-                                        s.mem[s.x[rs1] + imm];   s.pc += 4
+def LB (s,rd,imm,rs1): s.x[rd] =  _i8(s.mem[s.x[rs1] + imm]);  _pc(s)
+def LBU(s,rd,imm,rs1): s.x[rd] =      s.mem[s.x[rs1] + imm];   _pc(s)
+def LH (s,rd,imm,rs1): s.x[rd] = (_i8(s.mem[s.x[rs1] + imm + 1]) << 8) + \
+                                      s.mem[s.x[rs1] + imm];   _pc(s)
+def LHU(s,rd,imm,rs1): s.x[rd] =     (s.mem[s.x[rs1] + imm + 1]  << 8) + \
+                                      s.mem[s.x[rs1] + imm];   _pc(s)
+def LW (s,rd,imm,rs1): s.x[rd] = (_i8(s.mem[s.x[rs1] + imm + 3]) << 24) + \
+                                     (s.mem[s.x[rs1] + imm + 2]  << 16) + \
+                                     (s.mem[s.x[rs1] + imm + 1]  << 8)  + \
+                                      s.mem[s.x[rs1] + imm];   _pc(s)
 
 # store, note the different argument order, example: 'sb rs2, offset(rs1)'
-def SB(s, rs2, imm, rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  s.pc += 4
-def SH(s, rs2, imm, rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  s.pc += 4; \
-                          s.mem[s.x[rs1] + imm + 1] = (s.x[rs2] >> 8) & 0xff
-def SW(s, rs2, imm, rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  s.pc += 4; \
-                          s.mem[s.x[rs1] + imm + 1] = (s.x[rs2] >> 8)  & 0xff; \
-                          s.mem[s.x[rs1] + imm + 2] = (s.x[rs2] >> 16) & 0xff; \
-                          s.mem[s.x[rs1] + imm + 3] = (s.x[rs2] >> 24) & 0xff
+def SB(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  _pc(s)
+def SH(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  _pc(s); \
+                       s.mem[s.x[rs1] + imm + 1] = (s.x[rs2] >> 8) & 0xff
+def SW(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  _pc(s); \
+                       s.mem[s.x[rs1] + imm + 1] = (s.x[rs2] >> 8)  & 0xff; \
+                       s.mem[s.x[rs1] + imm + 2] = (s.x[rs2] >> 16) & 0xff; \
+                       s.mem[s.x[rs1] + imm + 3] = (s.x[rs2] >> 24) & 0xff
 
-# TODOs:
-#  - add ISA extension F
-#  - the 3 missing instructions FENCE, ECALL, EBREAK are not really needed here
-#  - add a check for writing to x[0], which is a known issue here
+# Note: the 3 missing instructions FENCE, ECALL, EBREAK are not needed here
 
 #-------------------------------------------------------------------------------
 # M-extension (RV32M)
 #-------------------------------------------------------------------------------
-def _muls(a, b): return np.multiply(  a,    b,  dtype=np.int64)
-def _mulu(a, b): return np.multiply(u(a), u(b), dtype=np.uint64)
-def MUL   (s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2]);        s.pc += 4
-def MULH  (s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2])  >> 32; s.pc += 4
-def MULHSU(s, rd, rs1, rs2): s.x[rd] = _muls(s.x[rs1],u(s.x[rs2])) >> 32; s.pc += 4
-def MULHU (s, rd, rs1, rs2): s.x[rd] = _mulu(s.x[rs1],s.x[rs2]) >> u(32); s.pc += 4
+def _muls(a,b): return np.multiply(   a,     b,  dtype=np.int64)
+def _mulu(a,b): return np.multiply(_u(a), _u(b), dtype=np.uint64)
+def MUL   (s,rd,rs1,rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2]);         _pc(s)
+def MULH  (s,rd,rs1,rs2): s.x[rd] = _muls(s.x[rs1],  s.x[rs2])   >> 32; _pc(s)
+def MULHSU(s,rd,rs1,rs2): s.x[rd] = _muls(s.x[rs1],_u(s.x[rs2])) >> 32; _pc(s)
+def MULHU (s,rd,rs1,rs2): s.x[rd] = _mulu(s.x[rs1],s.x[rs2]) >> _u(32); _pc(s)
 # TODO: why is Python integer division '//' and remainder '%' not exactly the same
 # as RISC-V 'div' and 'rem'? # For efficient mapping of Python code to RISC-V,
 # these basic instructions should be exactly the same
-def _div(a, b): return np.fix(a/b).astype(int)
-def _rem(a, b): return a - b * _div(a, b)
-def DIV   (s, rd, rs1, rs2): s.x[rd] = _div(  s.x[rs1],   s.x[rs2]);  s.pc += 4
-def DIVU  (s, rd, rs1, rs2): s.x[rd] = _div(u(s.x[rs1]),u(s.x[rs2])); s.pc += 4
-def REM   (s, rd, rs1, rs2): s.x[rd] = _rem(  s.x[rs1],   s.x[rs2]);  s.pc += 4
-def REMU  (s, rd, rs1, rs2): s.x[rd] = _rem(u(s.x[rs1]),u(s.x[rs2])); s.pc += 4
+def _div(a,b): return np.fix(a/b).astype(int)
+def _rem(a,b): return a - b * _div(a, b)
+def DIV (s,rd,rs1,rs2): s.x[rd] = _div(   s.x[rs1],    s.x[rs2]);  _pc(s)
+def DIVU(s,rd,rs1,rs2): s.x[rd] = _div(_u(s.x[rs1]),_u(s.x[rs2])); _pc(s)
+def REM (s,rd,rs1,rs2): s.x[rd] = _rem(   s.x[rs1],    s.x[rs2]);  _pc(s)
+def REMU(s,rd,rs1,rs2): s.x[rd] = _rem(_u(s.x[rs1]),_u(s.x[rs2])); _pc(s)
+
+#-------------------------------------------------------------------------------
+# F-extension (RV32F)
+#-------------------------------------------------------------------------------
+s.f = np.zeros(32, dtype=np.float32)  # register file 'f[]' for F extension
+
+def FADD_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] + s.f[rs2];     _pc(s)
+def FSUB_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] - s.f[rs2];     _pc(s)
+def FMUL_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] * s.f[rs2];     _pc(s)
+def FDIV_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] / s.f[rs2];     _pc(s)
+def FSQRT_S (s,rd,rs1)    : s.f[rd] = np.sqrt(s.f[rs1]);       _pc(s)
+def FMIN_S  (s,rd,rs1,rs2): s.f[rd] = min(s.f[rs1], s.f[rs2]); _pc(s)
+def FMAX_S  (s,rd,rs1,rs2): s.f[rd] = max(s.f[rs1], s.f[rs2]); _pc(s)
+
+def FMADD_S (s,rd,rs1,rs2,rs3): s.f[rd] =  s.f[rs1] * s.f[rs2] + s.f[rs3]; _pc(s)
+def FMSUB_S (s,rd,rs1,rs2,rs3): s.f[rd] =  s.f[rs1] * s.f[rs2] - s.f[rs3]; _pc(s)
+def FNMADD_S(s,rd,rs1,rs2,rs3): s.f[rd] = -s.f[rs1] * s.f[rs2] - s.f[rs3]; _pc(s)
+def FNMSUB_S(s,rd,rs1,rs2,rs3): s.f[rd] = -s.f[rs1] * s.f[rs2] + s.f[rs3]; _pc(s)
+
+# TODOs:
+#   - add missing instructions
+#   - add rounding mode (rm) argument. Only rm = 0 is implemented right now.
+#     See experimental/rounding_modes.py for more details.
+#   - add floating point flags and CSR for config
 
 #-------------------------------------------------------------------------------
 # Part II
@@ -138,7 +165,7 @@ def write_i32(s, x, addr):
 
 def read_i32(s, addr):
   """"read 32-bit int from memory"""
-  ret = i8(s.mem[addr + 3]) << 3*8
+  ret = _i8(s.mem[addr + 3]) << 3*8
   for i in range(0, 3):
     ret += s.mem[addr + i] << i*8
   return ret
@@ -158,7 +185,7 @@ def read_i32_vec(s, size, start):
 def mem_dump(s, start, size):
   """for debug: dump memory from byteaddress 'start', dump out 'size' bytes"""
   for i in range(start, start + size, 4):
-    print('%08x' % u(read_i32(s, i)))
+    print('%08x' % _u(read_i32(s, i)))
 
 def dump_state(s):
   print("pc   : %4d" % s.pc)
@@ -360,7 +387,7 @@ def enc(s, inst, arg1, arg2, arg3=0):
 
   # write instruction into memory at address 's.pc'
   write_i32(s, st.int, s.pc)
-  s.pc += 4
+  _pc(s)
 
 #-------------------------------------------------------------------------------
 # execute code from address 'start', stop execution after n instructions
@@ -369,7 +396,7 @@ def exe(s, start, instructions):
   s.pc = start
   for i in range(0, instructions):
     inst = read_i32(s, s.pc)
-    dec(Bits(uint=int(u(inst)), length=32))
+    dec(Bits(uint=int(_u(inst)), length=32))
 
 #-------------------------------------------------------------------------------
 # assembler mnemonics
@@ -378,12 +405,20 @@ x0  = 0;  x1  = 1;  x2  = 2;  x3  = 3;  x4  = 4;  x5  = 5;  x6  = 6;  x7  = 7
 x8  = 8;  x9  = 9;  x10 = 10; x11 = 11; x12 = 12; x13 = 13; x14 = 14; x15 = 15
 x16 = 16; x17 = 17; x18 = 18; x19 = 19; x20 = 20; x21 = 21; x22 = 22; x23 = 23
 x24 = 24; x25 = 25; x26 = 26; x27 = 27; x28 = 28; x29 = 29; x30 = 30; x31 = 31
+zero= 0;  ra  = 1;  sp  = 2;  gp  = 3;  tp  = 4;  t0  = 5;  t1  = 6;  t2  = 7; fp = 8
+s0  = 8;  s1  = 9;  a0  = 10; a1  = 11; a2  = 12; a3  = 13; a4  = 14; a5  = 15
+a6  = 16; a7  = 17; s2  = 18; s3  = 19; s4  = 20; s5  = 21; s6  = 22; s7  = 23
+s8  = 24; s9  = 25; s10 = 26; s11 = 27; t3  = 28; t4  = 29; t5  = 30; t6  = 31
 
-zero = 0; ra = x1;  sp = x2;  gp = x3;  tp = x4;  fp = x8
-t0 = x5;  t1 = x6;  t2 = x7;  t3 = x28; t4 = x29; t5 = x30; t6 = x31
-a0 = x10; a1 = x11; a2 = x12; a3 = x13; a4 = x14; a5 = x15; a6 = x16; a7 = x17
-s0 = x8;  s1 = x9;  s2 = x18; s3 = x19; s4 = x20; s5 = x21; s6 = x22; s7 = x23
-s8 = x24; s9 = x25; s10 = x26; s11 = x27
+# for F-extension only
+f0  = 0;  f1  = 1;  f2   = 2;  f3   = 3;  f4  = 4;  f5  = 5;  f6   = 6;  f7   = 7
+f8  = 8;  f9  = 9;  f10  = 10; f11  = 11; f12 = 12; f13 = 13; f14  = 14; f15  = 15
+f16 = 16; f17 = 17; f18  = 18; f19  = 19; f20 = 20; f21 = 21; f22  = 22; f23  = 23
+f24 = 24; f25 = 25; f26  = 26; f27  = 27; f28 = 28; f29 = 29; f30  = 30; f31  = 31
+ft0 = 0;  ft1 = 1;  ft2  = 2;  ft3  = 3;  ft4 = 4;  ft5 = 5;  ft6  = 6;  ft7  = 7
+fs0 = 8;  fs1 = 9;  fa0  = 10; fa1  = 11; fa2 = 12; fa3 = 13; fa4  = 14; fa5  = 15
+fa6 = 16; fa7 = 17; fs2  = 18; fs3  = 19; fs4 = 20; fs5 = 21; fs6  = 22; fs7  = 23
+fs8 = 24; fs9 = 25; fs10 = 26; fs11 = 27; ft8 = 28; ft9 = 29; ft10 = 30; ft11 = 31
 
 #-------------------------------------------------------------------------------
 # pseudoinstructions

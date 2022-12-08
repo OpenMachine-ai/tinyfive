@@ -1,11 +1,23 @@
 from tinyfive import *
 
 # this file performs the following tests:
-#   1) ALU instruction tests (arithmetic, logic, shift) derived from the
+#   1) floating point tests from the official RISC-V unit tests
+#   2) ALU instruction tests (arithmetic, logic, shift) derived from the
 #      official RISC-V test suite
-#   2) a few basic load/store tests
+#   3) a few basic load/store tests
 #
 # source for (1):
+#   The official RISC-V unit tests are here:
+#   https://github.com/riscv-software-src/riscv-tests
+#   Specifically, the following files and folders have been used:
+#     isa/macros/scalar/test_macros.h : macros TEST_FP_OP*_S
+#     isa/rv64uf : testcase from various *.s files
+#   The original copyright and license notice of the official RISC-V
+#   test-suite is as follows:
+#     Copyright (c) 2012-2015, The Regents of the University of California (Regents).
+#     All Rights Reserved.
+#
+# source for (2):
 #   The official RISC-V test-suite is here:
 #   https://github.com/riscv-non-isa/riscv-arch-test/blob/main/riscv-test-suite
 #   Specifically, the following files and folders have been used:
@@ -17,12 +29,104 @@ from tinyfive import *
 #     // SPDX-License-Identifier: BSD-3-Clause
 
 #-------------------------------------------------------------------------------
+# floating point unit tests
+#-------------------------------------------------------------------------------
+def check_fp(s, inst, rd, correctval):
+  error = not ((s.f[rd] == np.float32(correctval)) or
+               (np.isnan(s.f[rd]) and np.isnan(correctval)))
+  if error:
+    print('FAIL ' + inst + ' res = ' + str(s.f[rd]) + ' ref = ' +
+          str(np.float32(correctval)))
+  return int(error)
+
+def debug_test_fp_op(s, inst, correctval, val1, val2=0.0, val3=0.0):
+  """similar to TEST_FP_OP*_S from isa/macros/scalar/test_macros.h"""
+  clear_cpu(s)
+  s.f[1] = val1
+  s.f[2] = val2
+  s.f[3] = val3
+  if   inst == 'fadd.s'  : FADD_S  (s, 0, 1, 2)
+  elif inst == 'fsub.s'  : FSUB_S  (s, 0, 1, 2)
+  elif inst == 'fmul.s'  : FMUL_S  (s, 0, 1, 2)
+  elif inst == 'fdiv.s'  : FDIV_S  (s, 0, 1, 2)
+  elif inst == 'fsqrt.s' : FSQRT_S (s, 0, 1)
+  elif inst == 'fmin.s'  : FMIN_S  (s, 0, 1, 2)
+  elif inst == 'fmax.s'  : FMAX_S  (s, 0, 1, 2)
+  elif inst == 'fmadd.s' : FMADD_S (s, 0, 1, 2, 3)
+  elif inst == 'fmsub.s' : FMSUB_S (s, 0, 1, 2, 3)
+  elif inst == 'fnmadd.s': FNMADD_S(s, 0, 1, 2, 3)
+  elif inst == 'fnmsub.s': FNMSUB_S(s, 0, 1, 2, 3)
+  return check_fp(s, inst, 0, correctval)
+  # TODO: add check for floating point flags, as done in TEST_FP_OP*_S
+
+# fadd, fsub, fmul
+err = 0
+err += debug_test_fp_op(s, 'fadd.s',           3.5,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fadd.s',         -1234,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fadd.s',    3.14159265, 3.14159265, 0.00000001)
+err += debug_test_fp_op(s, 'fsub.s',           1.5,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fsub.s',         -1234,    -1235.1,       -1.1)
+err += debug_test_fp_op(s, 'fsub.s',    3.14159265, 3.14159265, 0.00000001)
+err += debug_test_fp_op(s, 'fmul.s',           2.5,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fmul.s',       1358.61,    -1235.1,       -1.1)
+err += debug_test_fp_op(s, 'fmul.s', 3.14159265e-8, 3.14159265, 0.00000001)
+err += debug_test_fp_op(s, 'fsub.s',        np.nan,     np.inf,     np.inf)
+
+# fmin, fmax
+# TODO: fix the tests that are commented out below
+err += debug_test_fp_op(s, 'fmin.s',        1.0,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fmin.s',    -1235.1,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fmin.s',    -1235.1,        1.1,    -1235.1)
+#err+= debug_test_fp_op(s, 'fmin.s',    -1235.1,     np.nan,    -1235.1)
+err += debug_test_fp_op(s, 'fmin.s', 0.00000001, 3.14159265, 0.00000001)
+err += debug_test_fp_op(s, 'fmin.s',       -2.0,       -1.0,       -2.0)
+err += debug_test_fp_op(s, 'fmax.s',        2.5,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fmax.s',        1.1,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fmax.s',        1.1,        1.1,    -1235.1)
+#err+= debug_test_fp_op(s, 'fmax.s',    -1235.1,     np.nan,    -1235.1)
+err += debug_test_fp_op(s, 'fmax.s', 3.14159265, 3.14159265, 0.00000001)
+err += debug_test_fp_op(s, 'fmax.s',       -1.0,       -1.0,       -2.0)
+#err+= debug_test_fp_op(s, 'fmax.s',        1.0,      sNaNf,        1.0)
+#err+= debug_test_fp_op(s, 'fmax.s',      qNaNf,     np.nan,     np.nan)
+#err+= debug_test_fp_op(s, 'fmin.s',       -0.0,       -0.0,        0.0)
+#err+= debug_test_fp_op(s, 'fmin.s',       -0.0,        0.0,       -0.0)
+#err+= debug_test_fp_op(s, 'fmax.s',        0.0,       -0.0,        0.0)
+#err+= debug_test_fp_op(s, 'fmax.s',        0.0,        0.0,       -0.0)
+
+# fdiv, fsqrt
+err += debug_test_fp_op(s, 'fdiv.s',  1.1557273520668288, 3.14159265, 2.71828182)
+err += debug_test_fp_op(s, 'fdiv.s', -0.9991093838555584,      -1234,     1235.1)
+err += debug_test_fp_op(s, 'fdiv.s',          3.14159265, 3.14159265,        1.0)
+err += debug_test_fp_op(s, 'fsqrt.s', 1.7724538498928541, 3.14159265)
+err += debug_test_fp_op(s, 'fsqrt.s',                100,      10000)
+err += debug_test_fp_op(s, 'fsqrt.s',             np.nan,       -1.0)
+err += debug_test_fp_op(s, 'fsqrt.s',          13.076696,      171.0)
+
+# fmadd, fnmadd, fmsub, fnmsub
+err += debug_test_fp_op(s, 'fmadd.s',      3.5,  1.0,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fmadd.s',   1236.2, -1.0,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fmadd.s',    -12.0,  2.0,       -5.0,       -2.0)
+
+err += debug_test_fp_op(s, 'fnmadd.s',    -3.5,  1.0,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fnmadd.s', -1236.2, -1.0,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fnmadd.s',    12.0,  2.0,       -5.0,       -2.0)
+
+err += debug_test_fp_op(s, 'fmsub.s',      1.5,  1.0,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fmsub.s',     1234, -1.0,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fmsub.s',     -8.0,  2.0,       -5.0,       -2.0)
+
+err += debug_test_fp_op(s, 'fnmsub.s',    -1.5,  1.0,        2.5,        1.0)
+err += debug_test_fp_op(s, 'fnmsub.s',   -1234, -1.0,    -1235.1,        1.1)
+err += debug_test_fp_op(s, 'fnmsub.s',     8.0,  2.0,       -5.0,       -2.0)
+
+print('FP-tests errors: ' + str(err))
+
+#-------------------------------------------------------------------------------
 # test ALU instructions
 #-------------------------------------------------------------------------------
+def i32(x): return np.int32(x)   # convert to 32-bit signed
+
 def check(s, inst, rd, correctval, val1, val2):
-  """TODO: current model doesn't support writing to x0, it's a known issue
-  so for now, just force x[0] to be always 0 here to mask this known issue"""
-  s.x[0] = 0
   if (s.x[rd] != i32(correctval)):
     print('FAIL ' + inst + ' ' + str(i32(val1)) + ' ' + str(i32(val2)) +
           ' res = ' + str(s.x[rd]) + ' ref = ' + str(i32(correctval)))
@@ -48,6 +152,7 @@ def test_imm_op(s, inst, rd, rs1, correctval, val1, imm):
 def debug_test_rr_op(s, inst, rd, rs1, rs2, correctval, val1, val2):
   """for debug only: use uppercase instructions instead of enc() and exe()
   TODO: eventually remove this function"""
+  clear_cpu(s)
   s.x[rs1] = val1
   s.x[rs2] = val2
   if   inst == 'add' : ADD (s, rd, rs1, rs2)
@@ -65,6 +170,7 @@ def debug_test_rr_op(s, inst, rd, rs1, rs2, correctval, val1, val2):
 def debug_test_imm_op(s, inst, rd, rs1, correctval, val1, imm):
   """for debug only: use uppercase instructions instead of enc() and exe()
   TODO: eventually remove this function"""
+  clear_cpu(s)
   s.x[rs1] = val1
   if   inst == 'addi' : ADDI (s, rd, rs1, imm)
   elif inst == 'slti' : SLTI (s, rd, rs1, imm)
@@ -688,7 +794,7 @@ print('ALU-tests errors: ' + str(err))
 #LBU(s, 1, -1, 9); print(s.x[1])
 #LH(s, 1, 1, 9);   print(s.x[1]); print(10 - 256*11)
 #s.x[2] = -1023
-#SH(s, 2, 1, 9); print(s.mem[10]); print(i8(s.mem[11]))
+#SH(s, 2, 1, 9); print(s.mem[10]); print(_i8(s.mem[11]))
 # TODO: improve these tests, they should be self-checking; or just replace them
 # by the official RISC-V test-suite
 
