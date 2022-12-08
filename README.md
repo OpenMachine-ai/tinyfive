@@ -1,13 +1,9 @@
 # TinyFive
 
-<p align="center">
-  <img src="https://github.com/OpenMachine-ai/tinyfive/blob/main/logo.jpg">
-</p>
-
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&count_bg=%232EF706&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 
-TinyFive is a simple RISC-V simulation model and
-[ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python.
+TinyFive is a small RISC-V simulation model and
+[ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python (fewer than 1000 lines of code).
 
 You will love TinyFive if you want to learn how RISC-V works.
 It's also useful for running neural networks on RISC-V: TinyFive lets you
@@ -15,6 +11,14 @@ simulate your RISC-V assembly code along with your neural network, all
 in Python (and without relying on RISC-V toolchains). TinyFive is also useful
 for ML scientists who are using ML/RL for compiler optimization (see
 [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
+
+### Table of content
+- [Running in colab notebook](#running-in-colab-notebook)
+- [Running on your machine](#running-on-your-machine)
+- [Latest status](#latest-status)
+- [Comparison](#comparison)
+- [References](#references)
+- [Tiny Tech promise](#tiny-tech-promise)
 
 ### Running in colab notebook
 You can run TinyFive in
@@ -42,10 +46,10 @@ python3 tests.py
 
 ### Latest status
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
-- 37 of the 40 base instructions `RV32I` and all 8 instructions of the M-extension `RV32M`
-  are implemented, and many of them are tested. (The three missing instructions `fence`,
-  `ebreak`, and `ecall` are not applicable here).
-- Remaining work: improve testing, add extensions F and V, add RV64. See TODOs in
+- 37 of the 40 base instructions `RV32I`, all instructions of the M-extension `RV32M`, and
+  some of the F-extension `RV32F` are already implemented, and many of them are tested. 
+  (The three missing instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
+- Remaining work: improve testing, add more extensions, add RV64. See TODOs in
   the code for more details.
 
 ### Comparison
@@ -66,7 +70,7 @@ The table below compares TinyFive with other ISS projects.
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf)
  for a brief description of most instructions. See also the 
- [RISC-V greencard](http://riscvbook.com/greencard-20181213.pdf).
+ [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
 - Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman
 (2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions.
 The Spanish version of this book is
@@ -83,3 +87,7 @@ that the core of TinyFive (without tests and examples) will always be below 1000
 Keep in mind that simplicity and size (in terms of number of instructions) is a key feature
 of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC
 stands for "reduced" (as opposed to complex CISC).
+
+<p align="center">
+  <img src="https://github.com/OpenMachine-ai/tinyfive/blob/main/logo.jpg">
+</p>
