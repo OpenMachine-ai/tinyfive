@@ -2,15 +2,12 @@
 
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&count_bg=%232EF706&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 
-TinyFive is a small RISC-V simulation model and
-[ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python (fewer than 1000 lines of code).
-
-You will love TinyFive if you want to learn how RISC-V works.
-It's also useful for running neural networks on RISC-V: TinyFive lets you
-simulate your RISC-V assembly code along with your neural network, all
-in Python (and without relying on RISC-V toolchains). TinyFive is also useful
-for ML scientists who are using ML/RL for compiler optimization (see
-[CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
+TinyFive is a simple RISC-V simulation model and
+[ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python:
+- TinyFive is useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network all in Python (and without relying on RISC-V toolchains). 
+- It's also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
+- If you want to learn how RISC-V works, TinyFive let's you play with instructions and assembler.
+- Fewer than 1000 lines of code (w/o tests and examples).
 
 ### Table of content
 - [Running in colab notebook](#running-in-colab-notebook)
