@@ -39,8 +39,20 @@ def check_fp(s, inst, rd, correctval):
           str(np.float32(correctval)))
   return int(error)
 
-def debug_test_fp_op(s, inst, correctval, val1, val2=0.0, val3=0.0):
+def test_fp_op(s, inst, correctval, val1, val2=0.0, val3=0.0):
   """similar to TEST_FP_OP*_S from isa/macros/scalar/test_macros.h"""
+  clear_cpu(s)
+  s.f[1] = val1
+  s.f[2] = val2
+  s.f[3] = val3
+  enc(s, inst, 0, 1, 2, 3)
+  exe(s, start=0, instructions=1)
+  return check_fp(s, inst, 0, correctval)
+  # TODO: add check for floating point flags, as done in TEST_FP_OP*_S
+
+def debug_test_fp_op(s, inst, correctval, val1, val2=0.0, val3=0.0):
+  """for debug only: use uppercase instructions instead of enc() and exe()
+  TODO: eventually remove this function"""
   clear_cpu(s)
   s.f[1] = val1
   s.f[2] = val2
@@ -57,67 +69,66 @@ def debug_test_fp_op(s, inst, correctval, val1, val2=0.0, val3=0.0):
   elif inst == 'fnmadd.s': FNMADD_S(s, 0, 1, 2, 3)
   elif inst == 'fnmsub.s': FNMSUB_S(s, 0, 1, 2, 3)
   return check_fp(s, inst, 0, correctval)
-  # TODO: add check for floating point flags, as done in TEST_FP_OP*_S
 
 # fadd, fsub, fmul
 err = 0
-err += debug_test_fp_op(s, 'fadd.s',           3.5,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fadd.s',         -1234,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fadd.s',    3.14159265, 3.14159265, 0.00000001)
-err += debug_test_fp_op(s, 'fsub.s',           1.5,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fsub.s',         -1234,    -1235.1,       -1.1)
-err += debug_test_fp_op(s, 'fsub.s',    3.14159265, 3.14159265, 0.00000001)
-err += debug_test_fp_op(s, 'fmul.s',           2.5,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fmul.s',       1358.61,    -1235.1,       -1.1)
-err += debug_test_fp_op(s, 'fmul.s', 3.14159265e-8, 3.14159265, 0.00000001)
-err += debug_test_fp_op(s, 'fsub.s',        np.nan,     np.inf,     np.inf)
+err += test_fp_op(s, 'fadd.s',           3.5,        2.5,        1.0)
+err += test_fp_op(s, 'fadd.s',         -1234,    -1235.1,        1.1)
+err += test_fp_op(s, 'fadd.s',    3.14159265, 3.14159265, 0.00000001)
+err += test_fp_op(s, 'fsub.s',           1.5,        2.5,        1.0)
+err += test_fp_op(s, 'fsub.s',         -1234,    -1235.1,       -1.1)
+err += test_fp_op(s, 'fsub.s',    3.14159265, 3.14159265, 0.00000001)
+err += test_fp_op(s, 'fmul.s',           2.5,        2.5,        1.0)
+err += test_fp_op(s, 'fmul.s',       1358.61,    -1235.1,       -1.1)
+err += test_fp_op(s, 'fmul.s', 3.14159265e-8, 3.14159265, 0.00000001)
+err += test_fp_op(s, 'fsub.s',        np.nan,     np.inf,     np.inf)
 
 # fmin, fmax
 # TODO: fix the tests that are commented out below
-err += debug_test_fp_op(s, 'fmin.s',        1.0,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fmin.s',    -1235.1,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fmin.s',    -1235.1,        1.1,    -1235.1)
-#err+= debug_test_fp_op(s, 'fmin.s',    -1235.1,     np.nan,    -1235.1)
-err += debug_test_fp_op(s, 'fmin.s', 0.00000001, 3.14159265, 0.00000001)
-err += debug_test_fp_op(s, 'fmin.s',       -2.0,       -1.0,       -2.0)
-err += debug_test_fp_op(s, 'fmax.s',        2.5,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fmax.s',        1.1,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fmax.s',        1.1,        1.1,    -1235.1)
-#err+= debug_test_fp_op(s, 'fmax.s',    -1235.1,     np.nan,    -1235.1)
-err += debug_test_fp_op(s, 'fmax.s', 3.14159265, 3.14159265, 0.00000001)
-err += debug_test_fp_op(s, 'fmax.s',       -1.0,       -1.0,       -2.0)
-#err+= debug_test_fp_op(s, 'fmax.s',        1.0,      sNaNf,        1.0)
-#err+= debug_test_fp_op(s, 'fmax.s',      qNaNf,     np.nan,     np.nan)
-#err+= debug_test_fp_op(s, 'fmin.s',       -0.0,       -0.0,        0.0)
-#err+= debug_test_fp_op(s, 'fmin.s',       -0.0,        0.0,       -0.0)
-#err+= debug_test_fp_op(s, 'fmax.s',        0.0,       -0.0,        0.0)
-#err+= debug_test_fp_op(s, 'fmax.s',        0.0,        0.0,       -0.0)
+err += test_fp_op(s, 'fmin.s',        1.0,        2.5,        1.0)
+err += test_fp_op(s, 'fmin.s',    -1235.1,    -1235.1,        1.1)
+err += test_fp_op(s, 'fmin.s',    -1235.1,        1.1,    -1235.1)
+#err+= test_fp_op(s, 'fmin.s',    -1235.1,     np.nan,    -1235.1)
+err += test_fp_op(s, 'fmin.s', 0.00000001, 3.14159265, 0.00000001)
+err += test_fp_op(s, 'fmin.s',       -2.0,       -1.0,       -2.0)
+err += test_fp_op(s, 'fmax.s',        2.5,        2.5,        1.0)
+err += test_fp_op(s, 'fmax.s',        1.1,    -1235.1,        1.1)
+err += test_fp_op(s, 'fmax.s',        1.1,        1.1,    -1235.1)
+#err+= test_fp_op(s, 'fmax.s',    -1235.1,     np.nan,    -1235.1)
+err += test_fp_op(s, 'fmax.s', 3.14159265, 3.14159265, 0.00000001)
+err += test_fp_op(s, 'fmax.s',       -1.0,       -1.0,       -2.0)
+#err+= test_fp_op(s, 'fmax.s',        1.0,      sNaNf,        1.0)
+#err+= test_fp_op(s, 'fmax.s',      qNaNf,     np.nan,     np.nan)
+#err+= test_fp_op(s, 'fmin.s',       -0.0,       -0.0,        0.0)
+#err+= test_fp_op(s, 'fmin.s',       -0.0,        0.0,       -0.0)
+#err+= test_fp_op(s, 'fmax.s',        0.0,       -0.0,        0.0)
+#err+= test_fp_op(s, 'fmax.s',        0.0,        0.0,       -0.0)
 
 # fdiv, fsqrt
-err += debug_test_fp_op(s, 'fdiv.s',  1.1557273520668288, 3.14159265, 2.71828182)
-err += debug_test_fp_op(s, 'fdiv.s', -0.9991093838555584,      -1234,     1235.1)
-err += debug_test_fp_op(s, 'fdiv.s',          3.14159265, 3.14159265,        1.0)
-err += debug_test_fp_op(s, 'fsqrt.s', 1.7724538498928541, 3.14159265)
-err += debug_test_fp_op(s, 'fsqrt.s',                100,      10000)
-err += debug_test_fp_op(s, 'fsqrt.s',             np.nan,       -1.0)
-err += debug_test_fp_op(s, 'fsqrt.s',          13.076696,      171.0)
+err += test_fp_op(s, 'fdiv.s',  1.1557273520668288, 3.14159265, 2.71828182)
+err += test_fp_op(s, 'fdiv.s', -0.9991093838555584,      -1234,     1235.1)
+err += test_fp_op(s, 'fdiv.s',          3.14159265, 3.14159265,        1.0)
+err += test_fp_op(s, 'fsqrt.s', 1.7724538498928541, 3.14159265)
+err += test_fp_op(s, 'fsqrt.s',                100,      10000)
+err += test_fp_op(s, 'fsqrt.s',             np.nan,       -1.0)
+err += test_fp_op(s, 'fsqrt.s',          13.076696,      171.0)
 
 # fmadd, fnmadd, fmsub, fnmsub
-err += debug_test_fp_op(s, 'fmadd.s',      3.5,  1.0,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fmadd.s',   1236.2, -1.0,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fmadd.s',    -12.0,  2.0,       -5.0,       -2.0)
+err += test_fp_op(s, 'fmadd.s',      3.5,  1.0,        2.5,        1.0)
+err += test_fp_op(s, 'fmadd.s',   1236.2, -1.0,    -1235.1,        1.1)
+err += test_fp_op(s, 'fmadd.s',    -12.0,  2.0,       -5.0,       -2.0)
 
-err += debug_test_fp_op(s, 'fnmadd.s',    -3.5,  1.0,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fnmadd.s', -1236.2, -1.0,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fnmadd.s',    12.0,  2.0,       -5.0,       -2.0)
+err += test_fp_op(s, 'fnmadd.s',    -3.5,  1.0,        2.5,        1.0)
+err += test_fp_op(s, 'fnmadd.s', -1236.2, -1.0,    -1235.1,        1.1)
+err += test_fp_op(s, 'fnmadd.s',    12.0,  2.0,       -5.0,       -2.0)
 
-err += debug_test_fp_op(s, 'fmsub.s',      1.5,  1.0,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fmsub.s',     1234, -1.0,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fmsub.s',     -8.0,  2.0,       -5.0,       -2.0)
+err += test_fp_op(s, 'fmsub.s',      1.5,  1.0,        2.5,        1.0)
+err += test_fp_op(s, 'fmsub.s',     1234, -1.0,    -1235.1,        1.1)
+err += test_fp_op(s, 'fmsub.s',     -8.0,  2.0,       -5.0,       -2.0)
 
-err += debug_test_fp_op(s, 'fnmsub.s',    -1.5,  1.0,        2.5,        1.0)
-err += debug_test_fp_op(s, 'fnmsub.s',   -1234, -1.0,    -1235.1,        1.1)
-err += debug_test_fp_op(s, 'fnmsub.s',     8.0,  2.0,       -5.0,       -2.0)
+err += test_fp_op(s, 'fnmsub.s',    -1.5,  1.0,        2.5,        1.0)
+err += test_fp_op(s, 'fnmsub.s',   -1234, -1.0,    -1235.1,        1.1)
+err += test_fp_op(s, 'fnmsub.s',     8.0,  2.0,       -5.0,       -2.0)
 
 print('FP-tests errors: ' + str(err))
 

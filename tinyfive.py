@@ -123,15 +123,15 @@ def REMU(s,rd,rs1,rs2): s.x[rd] = _rem(_u(s.x[rs1]),_u(s.x[rs2])); _pc(s)
 #-------------------------------------------------------------------------------
 # F-extension (RV32F)
 #-------------------------------------------------------------------------------
-s.f = np.zeros(32, dtype=np.float32)  # register file 'f[]' for F extension
+s.f = np.zeros(32, dtype=np.float32)  # register file 'f[]' for F-extension
 
-def FADD_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] + s.f[rs2];     _pc(s)
-def FSUB_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] - s.f[rs2];     _pc(s)
-def FMUL_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] * s.f[rs2];     _pc(s)
-def FDIV_S  (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] / s.f[rs2];     _pc(s)
-def FSQRT_S (s,rd,rs1)    : s.f[rd] = np.sqrt(s.f[rs1]);       _pc(s)
-def FMIN_S  (s,rd,rs1,rs2): s.f[rd] = min(s.f[rs1], s.f[rs2]); _pc(s)
-def FMAX_S  (s,rd,rs1,rs2): s.f[rd] = max(s.f[rs1], s.f[rs2]); _pc(s)
+def FADD_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] + s.f[rs2];     _pc(s)
+def FSUB_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] - s.f[rs2];     _pc(s)
+def FMUL_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] * s.f[rs2];     _pc(s)
+def FDIV_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] / s.f[rs2];     _pc(s)
+def FSQRT_S(s,rd,rs1)    : s.f[rd] = np.sqrt(s.f[rs1]);       _pc(s)
+def FMIN_S (s,rd,rs1,rs2): s.f[rd] = min(s.f[rs1], s.f[rs2]); _pc(s)
+def FMAX_S (s,rd,rs1,rs2): s.f[rd] = max(s.f[rs1], s.f[rs2]); _pc(s)
 
 def FMADD_S (s,rd,rs1,rs2,rs3): s.f[rd] =  s.f[rs1] * s.f[rs2] + s.f[rs3]; _pc(s)
 def FMSUB_S (s,rd,rs1,rs2,rs3): s.f[rd] =  s.f[rs1] * s.f[rs2] - s.f[rs3]; _pc(s)
@@ -208,6 +208,8 @@ def dec(inst):
   f3     = field(inst, 14, 12).bin
   rs1    = field(inst, 19, 15).uint
   rs2    = field(inst, 24, 20).uint
+  rs3    = field(inst, 31, 27).uint
+  f2     = field(inst, 26, 25).bin
   f7     = field(inst, 31, 25).bin
   shamt  = rs2
   imm_i  = field(inst, 31, 20).int                                 # I-type
@@ -221,6 +223,7 @@ def dec(inst):
   # below is copied from table 24.2 of RISC-V ISA Spec Vol I
   f3_opc = f3 + '_' + opcode
   f7_f3_ = f7 + '_' + f3_opc
+  f2_f3_ = f2 + '_' + f3_opc
   if   opcode ==     '0110111': LUI  (s, rd, imm_u)
   elif opcode ==     '0010111': AUIPC(s, rd, imm_u)
   elif opcode ==     '1101111': JAL  (s, rd, imm_j)
@@ -265,7 +268,7 @@ def dec(inst):
   elif f7_f3_ == '0000000_110_0110011': OR  (s, rd, rs1, rs2)
   elif f7_f3_ == '0000000_111_0110011': AND (s, rd, rs1, rs2)
 
-  # M extension
+  # M-extension
   elif f7_f3_ == '0000001_000_0110011': MUL   (s, rd, rs1, rs2)
   elif f7_f3_ == '0000001_001_0110011': MULH  (s, rd, rs1, rs2)
   elif f7_f3_ == '0000001_010_0110011': MULHSU(s, rd, rs1, rs2)
@@ -274,6 +277,19 @@ def dec(inst):
   elif f7_f3_ == '0000001_101_0110011': DIVU  (s, rd, rs1, rs2)
   elif f7_f3_ == '0000001_110_0110011': REM   (s, rd, rs1, rs2)
   elif f7_f3_ == '0000001_111_0110011': REMU  (s, rd, rs1, rs2)
+
+  # F-extension
+  elif f7_f3_ == '0000000_000_1010011': FADD_S (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000100_000_1010011': FSUB_S (s, rd, rs1, rs2)
+  elif f7_f3_ == '0001000_000_1010011': FMUL_S (s, rd, rs1, rs2)
+  elif f7_f3_ == '0001100_000_1010011': FDIV_S (s, rd, rs1, rs2)
+  elif f7_f3_ == '0101100_000_1010011': FSQRT_S(s, rd, rs1)
+  elif f7_f3_ == '0010100_000_1010011': FMIN_S (s, rd, rs1, rs2)
+  elif f7_f3_ == '0010100_001_1010011': FMAX_S (s, rd, rs1, rs2)
+  elif f2_f3_ == '00_000_1000011': FMADD_S (s, rd, rs1, rs2, rs3)
+  elif f2_f3_ == '00_000_1000111': FMSUB_S (s, rd, rs1, rs2, rs3)
+  elif f2_f3_ == '00_000_1001011': FNMSUB_S(s, rd, rs1, rs2, rs3)
+  elif f2_f3_ == '00_000_1001111': FNMADD_S(s, rd, rs1, rs2, rs3)
 
   else:
     print('ERROR: this instruction is not supported: ' + str(inst))
@@ -284,6 +300,10 @@ def dec(inst):
 def r_type(f7, f3, opcode, rd, rs1, rs2):
   return pack('bin:7, uint:5, uint:5, bin:3, uint:5, bin:7',
                f7, rs2, rs1, f3, rd, opcode)
+
+def r4_type(f2, f3, opcode, rd, rs1, rs2, rs3):
+  return pack('uint:5, bin:2, uint:5, uint:5, bin:3, uint:5, bin:7',
+               rs3, f2, rs2, rs1, f3, rd, opcode)
 
 def i_type(f3, opcode, rd, rs1, imm):
   return pack('int:12, uint:5, bin:3, uint:5, bin:7', imm, rs1, f3, rd, opcode)
@@ -324,7 +344,7 @@ def j_type(opcode, rd, imm):
 # is perhaps a better way than bitstring (numpy's 'packbits' only works
 # on uint8)
 
-def enc(s, inst, arg1, arg2, arg3=0):
+def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   """encode instruction and write into mem[]"""
   if   inst == 'lui'  : st = u_type('0110111', arg1, arg2)
   elif inst == 'auipc': st = u_type('0010111', arg1, arg2)
@@ -372,7 +392,7 @@ def enc(s, inst, arg1, arg2, arg3=0):
   elif inst == 'or'  : st = r_type('0000000', '110', '0110011', arg1, arg2, arg3)
   elif inst == 'and' : st = r_type('0000000', '111', '0110011', arg1, arg2, arg3)
 
-  # M extension
+  # M-extension
   elif inst == 'mul'   : st = r_type('0000001', '000', '0110011', arg1, arg2, arg3)
   elif inst == 'mulh'  : st = r_type('0000001', '001', '0110011', arg1, arg2, arg3)
   elif inst == 'mulhsu': st = r_type('0000001', '010', '0110011', arg1, arg2, arg3)
@@ -381,6 +401,19 @@ def enc(s, inst, arg1, arg2, arg3=0):
   elif inst == 'divu'  : st = r_type('0000001', '101', '0110011', arg1, arg2, arg3)
   elif inst == 'rem'   : st = r_type('0000001', '110', '0110011', arg1, arg2, arg3)
   elif inst == 'remu'  : st = r_type('0000001', '111', '0110011', arg1, arg2, arg3)
+
+  # F-extension
+  elif inst == 'fadd.s' : st = r_type('0000000', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsub.s' : st = r_type('0000100', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fmul.s' : st = r_type('0001000', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fdiv.s' : st = r_type('0001100', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsqrt.s': st = r_type('0101100', '000', '1010011', arg1, arg2, 0)
+  elif inst == 'fmin.s' : st = r_type('0010100', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fmax.s' : st = r_type('0010100', '001', '1010011', arg1, arg2, arg3)
+  elif inst == 'fmadd.s' : st = r4_type('00', '000', '1000011', arg1,arg2,arg3,arg4)
+  elif inst == 'fmsub.s' : st = r4_type('00', '000', '1000111', arg1,arg2,arg3,arg4)
+  elif inst == 'fnmsub.s': st = r4_type('00', '000', '1001011', arg1,arg2,arg3,arg4)
+  elif inst == 'fnmadd.s': st = r4_type('00', '000', '1001111', arg1,arg2,arg3,arg4)
 
   else:
     print('ERROR: this instruction is not supported ' + inst)
