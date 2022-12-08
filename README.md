@@ -4,10 +4,10 @@
 
 TinyFive is a simple RISC-V simulation model and
 [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python:
-- TinyFive is useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network all in Python (and without relying on RISC-V toolchains). 
-- It's also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
+- It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network all in Python (and without relying on RISC-V toolchains). 
+- TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
-- Fewer than 1000 lines of code (w/o tests and examples).
+- [Fewer than 1000 lines](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py) of code (w/o tests and examples).
 
 ### Table of content
 - [Running in colab notebook](#running-in-colab-notebook)
@@ -46,7 +46,7 @@ python3 tests.py
 - 37 of the 40 base instructions `RV32I`, all instructions of the M-extension `RV32M`, and
   some of the F-extension `RV32F` are already implemented, and many of them are tested. 
   (The three missing instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
-- Remaining work: improve testing, add more extensions, add RV64. See TODOs in
+- Remaining work: improve testing, add more instructions and RV64. See TODOs in
   the code for more details.
 
 ### Comparison
