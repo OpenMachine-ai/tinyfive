@@ -6,7 +6,7 @@ TinyFive is a simple RISC-V simulation model and
 [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python:
 - TinyFive is useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network all in Python (and without relying on RISC-V toolchains). 
 - It's also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
-- If you want to learn how RISC-V works, TinyFive let's you play with instructions and assembler.
+- If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
 - Fewer than 1000 lines of code (w/o tests and examples).
 
 ### Table of content
@@ -54,7 +54,7 @@ The table below compares TinyFive with other ISS projects.
 
 | ISS | Author | Language | Mature? | Extensions | LOC |
 | --- | ------ | -------- | ------- | ---------- | --- |
-| [TinyFive](https://github.com/OpenMachine-ai/tinyfive)             | OpenMachine          | Python    | No               | I, M          | < 1k |
+| [TinyFive](https://github.com/OpenMachine-ai/tinyfive)             | OpenMachine          | Python    | No               | I, M, some F  | < 1k |
 | [Pydgin](https://github.com/cornell-brg/pydgin)                    | Cornell University   | Python, C | Last update 2016 | A, D, F, I, M | |
 | [Spike](https://github.com/riscv-software-src/riscv-isa-sim)       | UC Berkeley          | C, C++    | Yes              | All           | |
 | [riscvOVPsim](https://github.com/riscv-ovpsim/imperas-riscv-tests) | Imperas              | C         | Yes              | All           | |
