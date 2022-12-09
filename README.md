@@ -83,7 +83,9 @@ we believe that core technology should be simple and small (in terms of
 that the core of TinyFive (without tests and examples) will always be below 1000 lines.
 Keep in mind that simplicity and size (in terms of number of instructions) is a key feature
 of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC
-stands for "reduced" (as opposed to complex CISC).
+stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V
+has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
+the "RISC-V Reader" book.
 
 <p align="center">
   <img src="https://github.com/OpenMachine-ai/tinyfive/blob/main/logo.jpg">
