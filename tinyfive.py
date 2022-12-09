@@ -2,9 +2,10 @@ import numpy as np
 from bitstring import Bits, pack
 
 # This file is divided into two parts:
-#   1. Part I defines all state and instructions of RISC-V (without bit-encodings)
-#   2. Part II implements encoding and decoding functions around the instructions
-#      defined in part I
+#   - Part I defines all state and instructions of RISC-V (without the
+#     instruction bit-encodings).
+#   - Part II implements encoding and decoding functions around the instructions
+#     defined in part I.
 # Part I is sufficient for emulating RISC-V. Part II is only needed if you want
 # to emulate the instruction encoding of RISC-V.
 
@@ -81,23 +82,23 @@ def AUIPC(s,rd,imm): s.x[rd] = s.pc + (imm << 12); _pc(s)
 # load, note the different argument order, example: 'lb rd, offset(rs1)'
 def LB (s,rd,imm,rs1): s.x[rd] =  _i8(s.mem[s.x[rs1] + imm]);  _pc(s)
 def LBU(s,rd,imm,rs1): s.x[rd] =      s.mem[s.x[rs1] + imm];   _pc(s)
-def LH (s,rd,imm,rs1): s.x[rd] = (_i8(s.mem[s.x[rs1] + imm + 1]) << 8) + \
+def LH (s,rd,imm,rs1): s.x[rd] = (_i8(s.mem[s.x[rs1] + imm+1]) << 8) + \
                                       s.mem[s.x[rs1] + imm];   _pc(s)
-def LHU(s,rd,imm,rs1): s.x[rd] =     (s.mem[s.x[rs1] + imm + 1]  << 8) + \
+def LHU(s,rd,imm,rs1): s.x[rd] =     (s.mem[s.x[rs1] + imm+1]  << 8) + \
                                       s.mem[s.x[rs1] + imm];   _pc(s)
-def LW (s,rd,imm,rs1): s.x[rd] = (_i8(s.mem[s.x[rs1] + imm + 3]) << 24) + \
-                                     (s.mem[s.x[rs1] + imm + 2]  << 16) + \
-                                     (s.mem[s.x[rs1] + imm + 1]  << 8)  + \
+def LW (s,rd,imm,rs1): s.x[rd] = (_i8(s.mem[s.x[rs1] + imm+3]) << 24) + \
+                                     (s.mem[s.x[rs1] + imm+2]  << 16) + \
+                                     (s.mem[s.x[rs1] + imm+1]  << 8)  + \
                                       s.mem[s.x[rs1] + imm];   _pc(s)
 
 # store, note the different argument order, example: 'sb rs2, offset(rs1)'
-def SB(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  _pc(s)
-def SH(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  _pc(s); \
-                       s.mem[s.x[rs1] + imm + 1] = (s.x[rs2] >> 8) & 0xff
-def SW(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = s.x[rs2] & 0xff;  _pc(s); \
-                       s.mem[s.x[rs1] + imm + 1] = (s.x[rs2] >> 8)  & 0xff; \
-                       s.mem[s.x[rs1] + imm + 2] = (s.x[rs2] >> 16) & 0xff; \
-                       s.mem[s.x[rs1] + imm + 3] = (s.x[rs2] >> 24) & 0xff
+def SB(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm]   =  s.x[rs2] & 0xff; _pc(s)
+def SH(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm]   =  s.x[rs2] & 0xff; _pc(s); \
+                       s.mem[s.x[rs1] + imm+1] = (s.x[rs2] >> 8)  & 0xff
+def SW(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm]   =  s.x[rs2] & 0xff; _pc(s); \
+                       s.mem[s.x[rs1] + imm+1] = (s.x[rs2] >> 8)  & 0xff; \
+                       s.mem[s.x[rs1] + imm+2] = (s.x[rs2] >> 16) & 0xff; \
+                       s.mem[s.x[rs1] + imm+3] = (s.x[rs2] >> 24) & 0xff
 
 # Note: the 3 missing instructions FENCE, ECALL, EBREAK are not needed here
 
@@ -138,11 +139,40 @@ def FMSUB_S (s,rd,rs1,rs2,rs3): s.f[rd] =  s.f[rs1] * s.f[rs2] - s.f[rs3]; _pc(s
 def FNMADD_S(s,rd,rs1,rs2,rs3): s.f[rd] = -s.f[rs1] * s.f[rs2] - s.f[rs3]; _pc(s)
 def FNMSUB_S(s,rd,rs1,rs2,rs3): s.f[rd] = -s.f[rs1] * s.f[rs2] + s.f[rs3]; _pc(s)
 
+def FEQ_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] == s.f[rs2]); _pc(s)
+def FLT_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] <  s.f[rs2]); _pc(s)
+def FLE_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] <= s.f[rs2]); _pc(s)
+
+def f2b(x): return (s.f[x]).view(np.uint32)       # float-to-bits
+def b2f(x): return np.uint32(x).view(np.float32)  # bits-to-float
+
+def FLW_S(s,rd,imm,rs1): s.f[rd] = b2f((s.mem[s.x[rs1] + imm+3] << 24) + \
+                                       (s.mem[s.x[rs1] + imm+2] << 16) + \
+                                       (s.mem[s.x[rs1] + imm+1] << 8)  + \
+                                        s.mem[s.x[rs1] + imm]);   _pc(s)
+
+def FSW_S(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = f2b(rs2) & 0xff;   _pc(s); \
+                          s.mem[s.x[rs1] + imm+1] = (f2b(rs2) >> 8)  & 0xff; \
+                          s.mem[s.x[rs1] + imm+2] = (f2b(rs2) >> 16) & 0xff; \
+                          s.mem[s.x[rs1] + imm+3] = (f2b(rs2) >> 24) & 0xff
+
+def FCVT_S_W (s,rd,rs1): s.f[rd] = np.float32(   s.x[rs1]);   _pc(s)
+def FCVT_S_WU(s,rd,rs1): s.f[rd] = np.float32(_u(s.x[rs1]));  _pc(s)
+def FCVT_W_S (s,rd,rs1): s.x[rd] = np.int32  (   s.f[rs1]);   _pc(s)
+def FCVT_WU_S(s,rd,rs1): s.x[rd] = np.uint32 (   s.f[rs1]);   _pc(s)
+def FMV_W_X  (s,rd,rs1): s.f[rd] = b2f(s.x[rs1]);             _pc(s)
+def FMV_X_W  (s,rd,rs1): s.x[rd] = f2b(rs1);                  _pc(s)
+
+def _fsgn(s,rs1,msb): return b2f((msb & 0x80000000) | (f2b(rs1) & 0x7fffffff))
+def FSGNJ_S (s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1,  f2b(rs2));           _pc(s)
+def FSGNJN_S(s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1, ~f2b(rs2));           _pc(s)
+def FSGNJX_S(s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1, f2b(rs2) ^ f2b(rs1)); _pc(s)
+
 # TODOs:
-#   - add missing instructions
 #   - add rounding mode (rm) argument. Only rm = 0 is implemented right now.
 #     See experimental/rounding_modes.py for more details.
-#   - add floating point flags and CSR for config
+#   - add missing instruction FCLASS
+#   - add floating point CSR register
 
 #-------------------------------------------------------------------------------
 # Part II
