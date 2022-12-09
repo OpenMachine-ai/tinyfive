@@ -1,6 +1,6 @@
 # TinyFive
 
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&count_bg=%232EF706&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&count_bg=%232EF706&title_bg=%23555555&icon=&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 
 TinyFive is a simple RISC-V simulation model and
 [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python:
