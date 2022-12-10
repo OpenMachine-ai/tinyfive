@@ -238,6 +238,7 @@ def dec(inst):
   f3     = field(inst, 14, 12).bin
   rs1    = field(inst, 19, 15).uint
   rs2    = field(inst, 24, 20).uint
+  rs2_bi = field(inst, 24, 20).bin
   rs3    = field(inst, 31, 27).uint
   f2     = field(inst, 26, 25).bin
   f7     = field(inst, 31, 25).bin
@@ -249,54 +250,49 @@ def dec(inst):
   imm_u =  field(inst, 31, 12).int                                 # U-type
   imm_j = (field(inst, 31, 31) + field(inst, 19, 12) +
            field(inst, 20, 20) + field(inst, 30, 21) + '0b0').int  # J-type
-
-  # below is copied from table 24.2 of RISC-V ISA Spec Vol I
   f3_opc = f3 + '_' + opcode
   f7_f3_ = f7 + '_' + f3_opc
   f2_f3_ = f2 + '_' + f3_opc
-  if   opcode ==     '0110111': LUI  (s, rd, imm_u)
-  elif opcode ==     '0010111': AUIPC(s, rd, imm_u)
-  elif opcode ==     '1101111': JAL  (s, rd, imm_j)
-  elif f3_opc == '000_1100111': JALR (s, rd, rs1, imm_i)
+  f7_rs2 = f7 + '_' + rs2_bi + '_' + f3_opc
 
-  elif f3_opc == '000_1100011': BEQ (s, rs1, rs2, imm_b)
-  elif f3_opc == '001_1100011': BNE (s, rs1, rs2, imm_b)
-  elif f3_opc == '100_1100011': BLT (s, rs1, rs2, imm_b)
-  elif f3_opc == '101_1100011': BGE (s, rs1, rs2, imm_b)
-  elif f3_opc == '110_1100011': BLTU(s, rs1, rs2, imm_b)
-  elif f3_opc == '111_1100011': BGEU(s, rs1, rs2, imm_b)
-
-  elif f3_opc == '000_0000011': LB (s, rd, imm_i, rs1)
-  elif f3_opc == '001_0000011': LH (s, rd, imm_i, rs1)
-  elif f3_opc == '010_0000011': LW (s, rd, imm_i, rs1)
-  elif f3_opc == '100_0000011': LBU(s, rd, imm_i, rs1)
-  elif f3_opc == '101_0000011': LHU(s, rd, imm_i, rs1)
-
-  elif f3_opc == '000_0100011': SB(s, rs2, imm_s, rs1)
-  elif f3_opc == '001_0100011': SH(s, rs2, imm_s, rs1)
-  elif f3_opc == '010_0100011': SW(s, rs2, imm_s, rs1)
-
-  elif f3_opc == '000_0010011': ADDI (s, rd, rs1, imm_i)
-  elif f3_opc == '010_0010011': SLTI (s, rd, rs1, imm_i)
-  elif f3_opc == '011_0010011': SLTIU(s, rd, rs1, imm_i)
-  elif f3_opc == '100_0010011': XORI (s, rd, rs1, imm_i)
-  elif f3_opc == '110_0010011': ORI  (s, rd, rs1, imm_i)
-  elif f3_opc == '111_0010011': ANDI (s, rd, rs1, imm_i)
-
-  elif f7_f3_ == '0000000_001_0010011': SLLI(s, rd, rs1, shamt)
-  elif f7_f3_ == '0000000_101_0010011': SRLI(s, rd, rs1, shamt)
-  elif f7_f3_ == '0100000_101_0010011': SRAI(s, rd, rs1, shamt)
-
-  elif f7_f3_ == '0000000_000_0110011': ADD (s, rd, rs1, rs2)
-  elif f7_f3_ == '0100000_000_0110011': SUB (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_001_0110011': SLL (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_010_0110011': SLT (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_011_0110011': SLTU(s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_100_0110011': XOR (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_101_0110011': SRL (s, rd, rs1, rs2)
-  elif f7_f3_ == '0100000_101_0110011': SRA (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_110_0110011': OR  (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000000_111_0110011': AND (s, rd, rs1, rs2)
+  # below is copied from table 24.2 of RISC-V ISA Spec Vol I
+  if   opcode ==             '0110111': LUI  (s, rd, imm_u)
+  elif opcode ==             '0010111': AUIPC(s, rd, imm_u)
+  elif opcode ==             '1101111': JAL  (s, rd, imm_j)
+  elif f3_opc ==         '000_1100111': JALR (s, rd, rs1, imm_i)
+  elif f3_opc ==         '000_1100011': BEQ  (s, rs1, rs2, imm_b)
+  elif f3_opc ==         '001_1100011': BNE  (s, rs1, rs2, imm_b)
+  elif f3_opc ==         '100_1100011': BLT  (s, rs1, rs2, imm_b)
+  elif f3_opc ==         '101_1100011': BGE  (s, rs1, rs2, imm_b)
+  elif f3_opc ==         '110_1100011': BLTU (s, rs1, rs2, imm_b)
+  elif f3_opc ==         '111_1100011': BGEU (s, rs1, rs2, imm_b)
+  elif f3_opc ==         '000_0000011': LB   (s, rd,  imm_i, rs1)
+  elif f3_opc ==         '001_0000011': LH   (s, rd,  imm_i, rs1)
+  elif f3_opc ==         '010_0000011': LW   (s, rd,  imm_i, rs1)
+  elif f3_opc ==         '100_0000011': LBU  (s, rd,  imm_i, rs1)
+  elif f3_opc ==         '101_0000011': LHU  (s, rd,  imm_i, rs1)
+  elif f3_opc ==         '000_0100011': SB   (s, rs2, imm_s, rs1)
+  elif f3_opc ==         '001_0100011': SH   (s, rs2, imm_s, rs1)
+  elif f3_opc ==         '010_0100011': SW   (s, rs2, imm_s, rs1)
+  elif f3_opc ==         '000_0010011': ADDI (s, rd, rs1, imm_i)
+  elif f3_opc ==         '010_0010011': SLTI (s, rd, rs1, imm_i)
+  elif f3_opc ==         '011_0010011': SLTIU(s, rd, rs1, imm_i)
+  elif f3_opc ==         '100_0010011': XORI (s, rd, rs1, imm_i)
+  elif f3_opc ==         '110_0010011': ORI  (s, rd, rs1, imm_i)
+  elif f3_opc ==         '111_0010011': ANDI (s, rd, rs1, imm_i)
+  elif f7_f3_ == '0000000_001_0010011': SLLI (s, rd, rs1, shamt)
+  elif f7_f3_ == '0000000_101_0010011': SRLI (s, rd, rs1, shamt)
+  elif f7_f3_ == '0100000_101_0010011': SRAI (s, rd, rs1, shamt)
+  elif f7_f3_ == '0000000_000_0110011': ADD  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0100000_000_0110011': SUB  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_001_0110011': SLL  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_010_0110011': SLT  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_011_0110011': SLTU (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_100_0110011': XOR  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_101_0110011': SRL  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0100000_101_0110011': SRA  (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_110_0110011': OR   (s, rd, rs1, rs2)
+  elif f7_f3_ == '0000000_111_0110011': AND  (s, rd, rs1, rs2)
 
   # M-extension
   elif f7_f3_ == '0000001_000_0110011': MUL   (s, rd, rs1, rs2)
@@ -309,17 +305,31 @@ def dec(inst):
   elif f7_f3_ == '0000001_111_0110011': REMU  (s, rd, rs1, rs2)
 
   # F-extension
-  elif f7_f3_ == '0000000_000_1010011': FADD_S (s, rd, rs1, rs2)
-  elif f7_f3_ == '0000100_000_1010011': FSUB_S (s, rd, rs1, rs2)
-  elif f7_f3_ == '0001000_000_1010011': FMUL_S (s, rd, rs1, rs2)
-  elif f7_f3_ == '0001100_000_1010011': FDIV_S (s, rd, rs1, rs2)
-  elif f7_f3_ == '0101100_000_1010011': FSQRT_S(s, rd, rs1)
-  elif f7_f3_ == '0010100_000_1010011': FMIN_S (s, rd, rs1, rs2)
-  elif f7_f3_ == '0010100_001_1010011': FMAX_S (s, rd, rs1, rs2)
-  elif f2_f3_ == '00_000_1000011': FMADD_S (s, rd, rs1, rs2, rs3)
-  elif f2_f3_ == '00_000_1000111': FMSUB_S (s, rd, rs1, rs2, rs3)
-  elif f2_f3_ == '00_000_1001011': FNMSUB_S(s, rd, rs1, rs2, rs3)
-  elif f2_f3_ == '00_000_1001111': FNMADD_S(s, rd, rs1, rs2, rs3)
+  elif f3_opc ==               '010_0000111': FLW_S    (s, rd,  imm_i, rs1)
+  elif f3_opc ==               '010_0100111': FSW_S    (s, rs2, imm_s, rs1)
+  elif f2_f3_ ==            '00_000_1000011': FMADD_S  (s, rd, rs1, rs2, rs3)
+  elif f2_f3_ ==            '00_000_1000111': FMSUB_S  (s, rd, rs1, rs2, rs3)
+  elif f2_f3_ ==            '00_000_1001011': FNMSUB_S (s, rd, rs1, rs2, rs3)
+  elif f2_f3_ ==            '00_000_1001111': FNMADD_S (s, rd, rs1, rs2, rs3)
+  elif f7_f3_ ==       '0000000_000_1010011': FADD_S   (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0000100_000_1010011': FSUB_S   (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0001000_000_1010011': FMUL_S   (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0001100_000_1010011': FDIV_S   (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0010000_000_1010011': FSGNJ_S  (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0010000_001_1010011': FSGNJN_S (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0010000_010_1010011': FSGNJX_S (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0010100_000_1010011': FMIN_S   (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '0010100_001_1010011': FMAX_S   (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '1010000_010_1010011': FEQ_S    (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '1010000_001_1010011': FLT_S    (s, rd, rs1, rs2)
+  elif f7_f3_ ==       '1010000_000_1010011': FLE_S    (s, rd, rs1, rs2)
+  elif f7_rs2 == '0101100_00000_000_1010011': FSQRT_S  (s, rd, rs1)
+  elif f7_rs2 == '1100000_00000_000_1010011': FCVT_W_S (s, rd, rs1)
+  elif f7_rs2 == '1100000_00001_000_1010011': FCVT_WU_S(s, rd, rs1)
+  elif f7_rs2 == '1110000_00000_000_1010011': FMV_X_W  (s, rd, rs1)
+  elif f7_rs2 == '1101000_00000_000_1010011': FCVT_S_W (s, rd, rs1)
+  elif f7_rs2 == '1101000_00001_000_1010011': FCVT_S_WU(s, rd, rs1)
+  elif f7_rs2 == '1111000_00000_000_1010011': FMV_W_X  (s, rd, rs1)
 
   else:
     print('ERROR: this instruction is not supported: ' + str(inst))
@@ -370,9 +380,12 @@ def j_type(opcode, rd, imm):
   return pack('uint:1, uint:10, uint:1, uint:8, uint:5, bin:7',
               imm20, imm10_1, imm11, imm19_12, rd, opcode)
 
-# TODO: consider rewriting the bitstring packing/unpacking code, there
-# is perhaps a better way than bitstring (numpy's 'packbits' only works
-# on uint8)
+# TODOs:
+#   - refactor enc() and dec() so that each opcode is written only
+#     once (not twice)
+#   - consider rewriting the bitstring packing/unpacking code, there
+#     is perhaps a better way than bitstring (numpy's 'packbits' only
+#     works on uint8)
 
 def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   """encode instruction and write into mem[]"""
@@ -380,47 +393,41 @@ def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   elif inst == 'auipc': st = u_type('0010111', arg1, arg2)
   elif inst == 'jal'  : st = j_type('1101111', arg1, arg2)
   elif inst == 'jalr' : st = i_type('000', '1100111', arg1, arg2, arg3)
-
-  elif inst == 'beq' : st = b_type('000', '1100011', arg1, arg2, arg3)
-  elif inst == 'bne' : st = b_type('001', '1100011', arg1, arg2, arg3)
-  elif inst == 'blt' : st = b_type('100', '1100011', arg1, arg2, arg3)
-  elif inst == 'bge' : st = b_type('101', '1100011', arg1, arg2, arg3)
-  elif inst == 'bltu': st = b_type('110', '1100011', arg1, arg2, arg3)
-  elif inst == 'bgeu': st = b_type('111', '1100011', arg1, arg2, arg3)
-
-  # note that arg2 and arg3 for i_type are swapped here
-  elif inst == 'lb'  : st = i_type('000', '0000011', arg1, arg3, arg2)
-  elif inst == 'lh'  : st = i_type('001', '0000011', arg1, arg3, arg2)
-  elif inst == 'lw'  : st = i_type('010', '0000011', arg1, arg3, arg2)
-  elif inst == 'lbu' : st = i_type('100', '0000011', arg1, arg3, arg2)
-  elif inst == 'lhu' : st = i_type('101', '0000011', arg1, arg3, arg2)
-
-  elif inst == 'sb'  : st = s_type('000', '0100011', arg1, arg2, arg3)
-  elif inst == 'sh'  : st = s_type('001', '0100011', arg1, arg2, arg3)
-  elif inst == 'sw'  : st = s_type('010', '0100011', arg1, arg2, arg3)
-
+  elif inst == 'beq'  : st = b_type('000', '1100011', arg1, arg2, arg3)
+  elif inst == 'bne'  : st = b_type('001', '1100011', arg1, arg2, arg3)
+  elif inst == 'blt'  : st = b_type('100', '1100011', arg1, arg2, arg3)
+  elif inst == 'bge'  : st = b_type('101', '1100011', arg1, arg2, arg3)
+  elif inst == 'bltu' : st = b_type('110', '1100011', arg1, arg2, arg3)
+  elif inst == 'bgeu' : st = b_type('111', '1100011', arg1, arg2, arg3)
+  # note that arg2 and arg3 for i_type are swapped for l* load instructions
+  elif inst == 'lb'   : st = i_type('000', '0000011', arg1, arg3, arg2)
+  elif inst == 'lh'   : st = i_type('001', '0000011', arg1, arg3, arg2)
+  elif inst == 'lw'   : st = i_type('010', '0000011', arg1, arg3, arg2)
+  elif inst == 'lbu'  : st = i_type('100', '0000011', arg1, arg3, arg2)
+  elif inst == 'lhu'  : st = i_type('101', '0000011', arg1, arg3, arg2)
+  elif inst == 'sb'   : st = s_type('000', '0100011', arg1, arg2, arg3)
+  elif inst == 'sh'   : st = s_type('001', '0100011', arg1, arg2, arg3)
+  elif inst == 'sw'   : st = s_type('010', '0100011', arg1, arg2, arg3)
   elif inst == 'addi' : st = i_type('000', '0010011', arg1, arg2, arg3)
   elif inst == 'slti' : st = i_type('010', '0010011', arg1, arg2, arg3)
   elif inst == 'sltiu': st = i_ty_u('011', '0010011', arg1, arg2, arg3)
   elif inst == 'xori' : st = i_type('100', '0010011', arg1, arg2, arg3)
   elif inst == 'ori'  : st = i_type('110', '0010011', arg1, arg2, arg3)
   elif inst == 'andi' : st = i_type('111', '0010011', arg1, arg2, arg3)
-
   # use r-type (instead of i-type) for below 3 instructions
-  elif inst == 'slli': st = r_type('0000000', '001', '0010011', arg1, arg2, arg3)
-  elif inst == 'srli': st = r_type('0000000', '101', '0010011', arg1, arg2, arg3)
-  elif inst == 'srai': st = r_type('0100000', '101', '0010011', arg1, arg2, arg3)
-
-  elif inst == 'add' : st = r_type('0000000', '000', '0110011', arg1, arg2, arg3)
-  elif inst == 'sub' : st = r_type('0100000', '000', '0110011', arg1, arg2, arg3)
-  elif inst == 'sll' : st = r_type('0000000', '001', '0110011', arg1, arg2, arg3)
-  elif inst == 'slt' : st = r_type('0000000', '010', '0110011', arg1, arg2, arg3)
-  elif inst == 'sltu': st = r_type('0000000', '011', '0110011', arg1, arg2, arg3)
-  elif inst == 'xor' : st = r_type('0000000', '100', '0110011', arg1, arg2, arg3)
-  elif inst == 'srl' : st = r_type('0000000', '101', '0110011', arg1, arg2, arg3)
-  elif inst == 'sra' : st = r_type('0100000', '101', '0110011', arg1, arg2, arg3)
-  elif inst == 'or'  : st = r_type('0000000', '110', '0110011', arg1, arg2, arg3)
-  elif inst == 'and' : st = r_type('0000000', '111', '0110011', arg1, arg2, arg3)
+  elif inst == 'slli' : st = r_type('0000000', '001', '0010011', arg1, arg2, arg3)
+  elif inst == 'srli' : st = r_type('0000000', '101', '0010011', arg1, arg2, arg3)
+  elif inst == 'srai' : st = r_type('0100000', '101', '0010011', arg1, arg2, arg3)
+  elif inst == 'add'  : st = r_type('0000000', '000', '0110011', arg1, arg2, arg3)
+  elif inst == 'sub'  : st = r_type('0100000', '000', '0110011', arg1, arg2, arg3)
+  elif inst == 'sll'  : st = r_type('0000000', '001', '0110011', arg1, arg2, arg3)
+  elif inst == 'slt'  : st = r_type('0000000', '010', '0110011', arg1, arg2, arg3)
+  elif inst == 'sltu' : st = r_type('0000000', '011', '0110011', arg1, arg2, arg3)
+  elif inst == 'xor'  : st = r_type('0000000', '100', '0110011', arg1, arg2, arg3)
+  elif inst == 'srl'  : st = r_type('0000000', '101', '0110011', arg1, arg2, arg3)
+  elif inst == 'sra'  : st = r_type('0100000', '101', '0110011', arg1, arg2, arg3)
+  elif inst == 'or'   : st = r_type('0000000', '110', '0110011', arg1, arg2, arg3)
+  elif inst == 'and'  : st = r_type('0000000', '111', '0110011', arg1, arg2, arg3)
 
   # M-extension
   elif inst == 'mul'   : st = r_type('0000001', '000', '0110011', arg1, arg2, arg3)
@@ -433,17 +440,31 @@ def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   elif inst == 'remu'  : st = r_type('0000001', '111', '0110011', arg1, arg2, arg3)
 
   # F-extension
-  elif inst == 'fadd.s' : st = r_type('0000000', '000', '1010011', arg1, arg2, arg3)
-  elif inst == 'fsub.s' : st = r_type('0000100', '000', '1010011', arg1, arg2, arg3)
-  elif inst == 'fmul.s' : st = r_type('0001000', '000', '1010011', arg1, arg2, arg3)
-  elif inst == 'fdiv.s' : st = r_type('0001100', '000', '1010011', arg1, arg2, arg3)
-  elif inst == 'fsqrt.s': st = r_type('0101100', '000', '1010011', arg1, arg2, 0)
-  elif inst == 'fmin.s' : st = r_type('0010100', '000', '1010011', arg1, arg2, arg3)
-  elif inst == 'fmax.s' : st = r_type('0010100', '001', '1010011', arg1, arg2, arg3)
-  elif inst == 'fmadd.s' : st = r4_type('00', '000', '1000011', arg1,arg2,arg3,arg4)
-  elif inst == 'fmsub.s' : st = r4_type('00', '000', '1000111', arg1,arg2,arg3,arg4)
-  elif inst == 'fnmsub.s': st = r4_type('00', '000', '1001011', arg1,arg2,arg3,arg4)
-  elif inst == 'fnmadd.s': st = r4_type('00', '000', '1001111', arg1,arg2,arg3,arg4)
+  elif inst == 'flw.s'    : st = i_type('010', '0000111', arg1, arg3, arg2) # arg swapped
+  elif inst == 'fsw.s'    : st = s_type('010', '0100111', arg1, arg2, arg3)
+  elif inst == 'fmadd.s'  : st = r4_type('00', '000', '1000011', arg1,arg2,arg3,arg4)
+  elif inst == 'fmsub.s'  : st = r4_type('00', '000', '1000111', arg1,arg2,arg3,arg4)
+  elif inst == 'fnmsub.s' : st = r4_type('00', '000', '1001011', arg1,arg2,arg3,arg4)
+  elif inst == 'fnmadd.s' : st = r4_type('00', '000', '1001111', arg1,arg2,arg3,arg4)
+  elif inst == 'fadd.s'   : st = r_type('0000000', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsub.s'   : st = r_type('0000100', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fmul.s'   : st = r_type('0001000', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fdiv.s'   : st = r_type('0001100', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsgnj.s'  : st = r_type('0010000', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsgnjn.s' : st = r_type('0010000', '001', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsgnjx.s' : st = r_type('0010000', '010', '1010011', arg1, arg2, arg3)
+  elif inst == 'fmin.s'   : st = r_type('0010100', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fmax.s'   : st = r_type('0010100', '001', '1010011', arg1, arg2, arg3)
+  elif inst == 'feq.s'    : st = r_type('1010000', '010', '1010011', arg1, arg2, arg3)
+  elif inst == 'flt.s'    : st = r_type('1010000', '001', '1010011', arg1, arg2, arg3)
+  elif inst == 'fle.s'    : st = r_type('1010000', '000', '1010011', arg1, arg2, arg3)
+  elif inst == 'fsqrt.s'  : st = r_type('0101100', '000', '1010011', arg1, arg2, 0)
+  elif inst == 'fcvt.w.s' : st = r_type('1100000', '000', '1010011', arg1, arg2, 0)
+  elif inst == 'fcvt.wu.s': st = r_type('1100000', '000', '1010011', arg1, arg2, 1)
+  elif inst == 'fmv.x.w'  : st = r_type('1110000', '000', '1010011', arg1, arg2, 0)
+  elif inst == 'fcvt.s.w' : st = r_type('1101000', '000', '1010011', arg1, arg2, 0)
+  elif inst == 'fcvt.s.wu': st = r_type('1101000', '000', '1010011', arg1, arg2, 1)
+  elif inst == 'fmv.w.x'  : st = r_type('1111000', '000', '1010011', arg1, arg2, 0)
 
   else:
     print('ERROR: this instruction is not supported ' + inst)

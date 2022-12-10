@@ -55,9 +55,8 @@ def test_imm(s, inst, rd, rs1, correctval, val1, imm):
   exe(s, start=0, instructions=1)
   return check(s, inst, s.x[rd], correctval)
 
+""" TODO: for debug only, eventually remove it
 def debug_test_rr(s, inst, rd, rs1, rs2, correctval, val1, val2):
-  """for debug only: use uppercase instructions instead of enc() and exe()
-  TODO: eventually remove this function"""
   clear_cpu(s)
   s.x[rs1] = val1
   s.x[rs2] = val2
@@ -74,8 +73,6 @@ def debug_test_rr(s, inst, rd, rs1, rs2, correctval, val1, val2):
   return check(s, inst, s.x[rd], correctval)
 
 def debug_test_imm(s, inst, rd, rs1, correctval, val1, imm):
-  """for debug only: use uppercase instructions instead of enc() and exe()
-  TODO: eventually remove this function"""
   clear_cpu(s)
   s.x[rs1] = val1
   if   inst == 'addi' : ADDI (s, rd, rs1, imm)
@@ -88,6 +85,7 @@ def debug_test_imm(s, inst, rd, rs1, correctval, val1, imm):
   elif inst == 'srli' : SRLI (s, rd, rs1, imm)
   elif inst == 'srai' : SRAI (s, rd, rs1, imm)
   return check(s, inst, s.x[rd], correctval)
+"""
 
 #-------------------------------------------------------------------------------
 # functions for floating point
@@ -111,12 +109,14 @@ def test_fp(s, inst, correctval, val1, val2=0.0, val3=0.0):
     s.x[1] = val1
   enc(s, inst, rd, 1, 2, 3)
   exe(s, start=0, instructions=1)
-  return check_fp(s, inst, s.f[rd], correctval)
+  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s']:
+    return check   (s, inst, s.x[rd], correctval)
+  else:
+    return check_fp(s, inst, s.f[rd], correctval)
   # TODO: add check for floating point flags, as done in TEST_FP_OP*_S
 
+""" TODO: for debug only, eventually remove it
 def debug_test_fp(s, inst, correctval, val1, val2=0.0, val3=0.0):
-  """for debug only: use uppercase instructions instead of enc() and exe()
-  TODO: eventually remove this function"""
   clear_cpu(s)
   s.f[1] = val1
   s.f[2] = val2
@@ -146,6 +146,7 @@ def debug_test_fp(s, inst, correctval, val1, val2=0.0, val3=0.0):
     return check   (s, inst, s.x[rd], correctval)
   else:
     return check_fp(s, inst, s.f[rd], correctval)
+"""
 
 NaN   = np.nan
 qNaNf = b2f(0x7fc00000)
@@ -213,81 +214,78 @@ err += test_fp(s, 'fnmsub.s',   -1234, -1.0,    -1235.1,        1.1)
 err += test_fp(s, 'fnmsub.s',     8.0,  2.0,       -5.0,       -2.0)
 
 # flw and fsw (adopted from isa/rv32uf/ldst.S)
-def debug_test_flw_fsw(s, tdat, tdat_offset):
-  """for debug only: use uppercase instructions instead of enc() and exe()
-  TODO: eventually remove this function"""
+def test_flw_fsw(s, tdat, tdat_offset):
   clear_cpu(s)
   s.x[a1] = tdat
-  FLW_S(s, f1, tdat_offset, a1)
-  FSW_S(s, f1, 20, a1)
-  LW   (s, a0, 20, a1)
+  enc(s, 'flw.s', f1, tdat_offset, a1)
+  enc(s, 'fsw.s', f1, 20, a1)
+  enc(s, 'lw',    a0, 20, a1)
+  exe(s, start=0, instructions=3)
   ref = read_i32(s, tdat+tdat_offset)
   return check(s, 'flw/fsw', s.x[a0], ref)
 
 tdat = 500  # write testdata to address 500
 write_i32(s, 0xbf800000, tdat)
 write_i32(s, 0x40000000, tdat+4)
-err += debug_test_flw_fsw(s, tdat, 4)
-err += debug_test_flw_fsw(s, tdat, 0)
+err += test_flw_fsw(s, tdat, 4)
+err += test_flw_fsw(s, tdat, 0)
 
 # feq, fle, flt
-err += debug_test_fp(s, 'feq.s', 1, -1.36, -1.36)
-err += debug_test_fp(s, 'fle.s', 1, -1.36, -1.36)
-err += debug_test_fp(s, 'flt.s', 0, -1.36, -1.36)
-err += debug_test_fp(s, 'feq.s', 0, -1.37, -1.36)
-err += debug_test_fp(s, 'fle.s', 1, -1.37, -1.36)
-err += debug_test_fp(s, 'flt.s', 1, -1.37, -1.36)
-err += debug_test_fp(s, 'feq.s', 0, NaN, 0)
-err += debug_test_fp(s, 'feq.s', 0, NaN, NaN)
-err += debug_test_fp(s, 'feq.s', 0, sNaNf, 0)
-err += debug_test_fp(s, 'flt.s', 0, NaN, 0)
-err += debug_test_fp(s, 'flt.s', 0, NaN, NaN)
-err += debug_test_fp(s, 'flt.s', 0, sNaNf, 0)
-err += debug_test_fp(s, 'fle.s', 0, NaN, 0)
-err += debug_test_fp(s, 'fle.s', 0, NaN, NaN)
-err += debug_test_fp(s, 'fle.s', 0, sNaNf, 0)
+err += test_fp(s, 'feq.s', 1, -1.36, -1.36)
+err += test_fp(s, 'fle.s', 1, -1.36, -1.36)
+err += test_fp(s, 'flt.s', 0, -1.36, -1.36)
+err += test_fp(s, 'feq.s', 0, -1.37, -1.36)
+err += test_fp(s, 'fle.s', 1, -1.37, -1.36)
+err += test_fp(s, 'flt.s', 1, -1.37, -1.36)
+err += test_fp(s, 'feq.s', 0, NaN, 0)
+err += test_fp(s, 'feq.s', 0, NaN, NaN)
+err += test_fp(s, 'feq.s', 0, sNaNf, 0)
+err += test_fp(s, 'flt.s', 0, NaN, 0)
+err += test_fp(s, 'flt.s', 0, NaN, NaN)
+err += test_fp(s, 'flt.s', 0, sNaNf, 0)
+err += test_fp(s, 'fle.s', 0, NaN, 0)
+err += test_fp(s, 'fle.s', 0, NaN, NaN)
+err += test_fp(s, 'fle.s', 0, sNaNf, 0)
 
 # fcvt
-err += debug_test_fp(s, 'fcvt.s.w',           2.0,  2)
-err += debug_test_fp(s, 'fcvt.s.w',          -2.0, -2)
-err += debug_test_fp(s, 'fcvt.s.wu',          2.0,  2)
-err += debug_test_fp(s, 'fcvt.s.wu',  4.2949673e9, -2)
-err += debug_test_fp(s, 'fcvt.w.s',          -1, -1.1)
-err += debug_test_fp(s, 'fcvt.w.s',          -1, -1.0)
-err += debug_test_fp(s, 'fcvt.w.s',           0, -0.9)
-err += debug_test_fp(s, 'fcvt.w.s',           0,  0.9)
-err += debug_test_fp(s, 'fcvt.w.s',           1,  1.0)
-err += debug_test_fp(s, 'fcvt.w.s',           1,  1.1)
-err += debug_test_fp(s, 'fcvt.w.s',      -1<<31, -3e9)
-err += debug_test_fp(s, 'fcvt.w.s',   (1<<31)-1,  3e9)
-err += debug_test_fp(s, 'fcvt.wu.s',          0, -3.0)
-err += debug_test_fp(s, 'fcvt.wu.s',          0, -1.0)
-err += debug_test_fp(s, 'fcvt.wu.s',          0, -0.9)
-err += debug_test_fp(s, 'fcvt.wu.s',          0,  0.9)
-err += debug_test_fp(s, 'fcvt.wu.s',          1,  1.0)
-err += debug_test_fp(s, 'fcvt.wu.s',          1,  1.1)
-err += debug_test_fp(s, 'fcvt.wu.s',          0, -3e9)
-err += debug_test_fp(s, 'fcvt.wu.s', 3000000000,  3e9)
+err += test_fp(s, 'fcvt.s.w',           2.0,  2)
+err += test_fp(s, 'fcvt.s.w',          -2.0, -2)
+err += test_fp(s, 'fcvt.s.wu',          2.0,  2)
+err += test_fp(s, 'fcvt.s.wu',  4.2949673e9, -2)
+err += test_fp(s, 'fcvt.w.s',          -1, -1.1)
+err += test_fp(s, 'fcvt.w.s',          -1, -1.0)
+err += test_fp(s, 'fcvt.w.s',           0, -0.9)
+err += test_fp(s, 'fcvt.w.s',           0,  0.9)
+err += test_fp(s, 'fcvt.w.s',           1,  1.0)
+err += test_fp(s, 'fcvt.w.s',           1,  1.1)
+err += test_fp(s, 'fcvt.w.s',      -1<<31, -3e9)
+err += test_fp(s, 'fcvt.w.s',   (1<<31)-1,  3e9)
+err += test_fp(s, 'fcvt.wu.s',          0, -3.0)
+err += test_fp(s, 'fcvt.wu.s',          0, -1.0)
+err += test_fp(s, 'fcvt.wu.s',          0, -0.9)
+err += test_fp(s, 'fcvt.wu.s',          0,  0.9)
+err += test_fp(s, 'fcvt.wu.s',          1,  1.0)
+err += test_fp(s, 'fcvt.wu.s',          1,  1.1)
+err += test_fp(s, 'fcvt.wu.s',          0, -3e9)
+err += test_fp(s, 'fcvt.wu.s', 3000000000,  3e9)
 
 # fmv, fsgnj
-def debug_test_fsgn(inst, new_sign, rs1_sign, rs2_sign):
-  """for debug only: use uppercase instructions instead of enc() and exe()
-  TODO: eventually remove this function"""
+def test_fsgn(inst, new_sign, rs1_sign, rs2_sign):
   ref = 0x12345678 | (-new_sign << 31)
+  clear_cpu(s)
   s.x[a1] = (rs1_sign << 31) | 0x12345678
   s.x[a2] = -rs2_sign
-  FMV_W_X(s, f1, a1)
-  FMV_W_X(s, f2, a2)
-  if   inst == 'fsgnj.s' : FSGNJ_S (s, f0, f1, f2)
-  elif inst == 'fsgnjn.s': FSGNJN_S(s, f0, f1, f2)
-  elif inst == 'fsgnjx.s': FSGNJX_S(s, f0, f1, f2)
-  FMV_X_W(s, a0, f0)
+  enc(s, 'fmv.w.x', f1, a1)
+  enc(s, 'fmv.w.x', f2, a2)
+  enc(s, inst,      f0, f1, f2)
+  enc(s, 'fmv.x.w', a0, f0)
+  exe(s, start=0, instructions=4)
   return check(s, 'fmv/fsgnj', s.x[a0], ref)
 
-err += debug_test_fsgn('fsgnj.s', 0, 0, 0)
-err += debug_test_fsgn('fsgnj.s', 1, 0, 1)
-err += debug_test_fsgn('fsgnj.s', 0, 1, 0)
-err += debug_test_fsgn('fsgnj.s', 1, 1, 1)
+err += test_fsgn('fsgnj.s', 0, 0, 0)
+err += test_fsgn('fsgnj.s', 1, 0, 1)
+err += test_fsgn('fsgnj.s', 0, 1, 0)
+err += test_fsgn('fsgnj.s', 1, 1, 1)
 
 print('FP-tests errors: ' + str(err))
 
