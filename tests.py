@@ -109,7 +109,7 @@ def test_fp(s, inst, correctval, val1, val2=0.0, val3=0.0):
     s.x[1] = val1
   enc(s, inst, rd, 1, 2, 3)
   exe(s, start=0, instructions=1)
-  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s']:
+  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s', 'fclass.s']:
     return check   (s, inst, s.x[rd], correctval)
   else:
     return check_fp(s, inst, s.f[rd], correctval)
@@ -142,15 +142,15 @@ def debug_test_fp(s, inst, correctval, val1, val2=0.0, val3=0.0):
   elif inst == 'fcvt.s.wu': FCVT_S_WU(s, rd, 1)
   elif inst == 'fcvt.w.s' : FCVT_W_S (s, rd, 1)
   elif inst == 'fcvt.wu.s': FCVT_WU_S(s, rd, 1)
-  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s']:
+  elif inst == 'fclass.s' : FCLASS_S (s, rd, 1)
+  if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s', 'fclass.s']:
     return check   (s, inst, s.x[rd], correctval)
   else:
     return check_fp(s, inst, s.f[rd], correctval)
 """
-
-NaN   = np.nan
-qNaNf = b2f(0x7fc00000)
-sNaNf = b2f(0x7f800001)
+qNaN = b2f(0x7fc00000)
+sNaN = b2f(0x7f800001)
+NaN  = np.nan
 
 #-------------------------------------------------------------------------------
 # floating point unit tests
@@ -183,8 +183,8 @@ err += test_fp(s, 'fmax.s',        1.1,        1.1,    -1235.1)
 #err+= test_fp(s, 'fmax.s',    -1235.1,        NaN,    -1235.1)
 err += test_fp(s, 'fmax.s', 3.14159265, 3.14159265, 0.00000001)
 err += test_fp(s, 'fmax.s',       -1.0,       -1.0,       -2.0)
-#err+= test_fp(s, 'fmax.s',        1.0,      sNaNf,        1.0)
-err += test_fp(s, 'fmax.s',      qNaNf,        NaN,        NaN)
+#err+= test_fp(s, 'fmax.s',        1.0,       sNaN,        1.0)
+err += test_fp(s, 'fmax.s',       qNaN,        NaN,        NaN)
 err += test_fp(s, 'fmin.s',       -0.0,       -0.0,        0.0)
 err += test_fp(s, 'fmin.s',       -0.0,        0.0,       -0.0)
 err += test_fp(s, 'fmax.s',        0.0,       -0.0,        0.0)
@@ -239,13 +239,13 @@ err += test_fp(s, 'fle.s', 1, -1.37, -1.36)
 err += test_fp(s, 'flt.s', 1, -1.37, -1.36)
 err += test_fp(s, 'feq.s', 0, NaN, 0)
 err += test_fp(s, 'feq.s', 0, NaN, NaN)
-err += test_fp(s, 'feq.s', 0, sNaNf, 0)
+err += test_fp(s, 'feq.s', 0, sNaN, 0)
 err += test_fp(s, 'flt.s', 0, NaN, 0)
 err += test_fp(s, 'flt.s', 0, NaN, NaN)
-err += test_fp(s, 'flt.s', 0, sNaNf, 0)
+err += test_fp(s, 'flt.s', 0, sNaN, 0)
 err += test_fp(s, 'fle.s', 0, NaN, 0)
 err += test_fp(s, 'fle.s', 0, NaN, NaN)
-err += test_fp(s, 'fle.s', 0, sNaNf, 0)
+err += test_fp(s, 'fle.s', 0, sNaN, 0)
 
 # fcvt
 err += test_fp(s, 'fcvt.s.w',           2.0,  2)
@@ -286,6 +286,18 @@ err += test_fsgn('fsgnj.s', 0, 0, 0)
 err += test_fsgn('fsgnj.s', 1, 0, 1)
 err += test_fsgn('fsgnj.s', 0, 1, 0)
 err += test_fsgn('fsgnj.s', 1, 1, 1)
+
+# fclass
+err += test_fp(s, 'fclass.s', 1 << 0, b2f(0xff800000))
+err += test_fp(s, 'fclass.s', 1 << 1, b2f(0xbf800000))
+err += test_fp(s, 'fclass.s', 1 << 2, b2f(0x807fffff))
+err += test_fp(s, 'fclass.s', 1 << 3, b2f(0x80000000))
+err += test_fp(s, 'fclass.s', 1 << 4, b2f(0x00000000))
+err += test_fp(s, 'fclass.s', 1 << 5, b2f(0x007fffff))
+err += test_fp(s, 'fclass.s', 1 << 6, b2f(0x3f800000))
+err += test_fp(s, 'fclass.s', 1 << 7, b2f(0x7f800000))
+err += test_fp(s, 'fclass.s', 1 << 8, b2f(0x7f800001))
+err += test_fp(s, 'fclass.s', 1 << 9, b2f(0x7fc00000))
 
 print('FP-tests errors: ' + str(err))
 

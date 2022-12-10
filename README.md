@@ -4,7 +4,7 @@
 
 TinyFive is a simple RISC-V simulation model and
 [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python:
-- It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network all in Python (and without relying on RISC-V toolchains). 
+- It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network all in Python (and without relying on RISC-V toolchains).
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
 - [Fewer than 1000 lines](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py) of code (w/o tests and examples).
@@ -43,11 +43,12 @@ python3 tests.py
 
 ### Latest status
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
-- 37 of the 40 base instructions `RV32I`, all instructions of the M-extension `RV32M`, and
-  some of the F-extension `RV32F` are already implemented, and many of them are tested. 
-  (The three missing instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
-- Remaining work: improve testing, add more instructions and RV64. See TODOs in
-  the code for more details.
+- 37 of the 40 base instructions (RV32I), all instructions of the M-extension (RV32M) and
+  the F-extension (RV32F) with the default rounding mode are already implemented, and many
+  of them are tested.  (The three missing RV32I instructions `fence`, `ebreak`, and `ecall`
+  are not applicable here.)
+- Remaining work: improve testing, add perhaps more extensions. See TODOs in the code for
+  more details.
 
 ### Comparison
 The table below compares TinyFive with other ISS projects.
@@ -61,12 +62,12 @@ The table below compares TinyFive with other ISS projects.
 | [Whisper](https://github.com/chipsalliance/SweRV-ISS)              | Western Digital      | C, C++    | Yes | Almost all                 | |
 | [Sail Model](https://github.com/riscv/sail-riscv)                  | Cambridge, Edinburgh | Sail, C   | Yes | All                        | |
 | [PiMaker/rvc](https://github.com/PiMaker/rvc)                      | PiMaker              | C         |  ?  |                            | |
-| [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |  ?  | A, I, M, Zifencei, Zicsr   | < 1k | 
+| [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |  ?  | A, I, M, Zifencei, Zicsr   | < 1k |
 
 ### References
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf)
- for a brief description of most instructions. See also the 
+ for a brief description of most instructions. See also the
  [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
 - Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman
 (2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions.

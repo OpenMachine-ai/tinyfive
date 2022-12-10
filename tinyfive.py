@@ -126,6 +126,9 @@ def REMU(s,rd,rs1,rs2): s.x[rd] = _rem(_u(s.x[rs1]),_u(s.x[rs2])); _pc(s)
 #-------------------------------------------------------------------------------
 s.f = np.zeros(32, dtype=np.float32)  # register file 'f[]' for F-extension
 
+def f2b(x): return (s.f[x]).view(np.uint32)       # float-to-bits
+def b2f(x): return np.uint32(x).view(np.float32)  # bits-to-float
+
 def FADD_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] + s.f[rs2];     _pc(s)
 def FSUB_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] - s.f[rs2];     _pc(s)
 def FMUL_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] * s.f[rs2];     _pc(s)
@@ -143,9 +146,6 @@ def FEQ_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] == s.f[rs2]); _pc(s)
 def FLT_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] <  s.f[rs2]); _pc(s)
 def FLE_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] <= s.f[rs2]); _pc(s)
 
-def f2b(x): return (s.f[x]).view(np.uint32)       # float-to-bits
-def b2f(x): return np.uint32(x).view(np.float32)  # bits-to-float
-
 def FLW_S(s,rd,imm,rs1): s.f[rd] = b2f((s.mem[s.x[rs1] + imm+3] << 24) + \
                                        (s.mem[s.x[rs1] + imm+2] << 16) + \
                                        (s.mem[s.x[rs1] + imm+1] << 8)  + \
@@ -156,22 +156,33 @@ def FSW_S(s,rs2,imm,rs1): s.mem[s.x[rs1] + imm] = f2b(rs2) & 0xff;   _pc(s); \
                           s.mem[s.x[rs1] + imm+2] = (f2b(rs2) >> 16) & 0xff; \
                           s.mem[s.x[rs1] + imm+3] = (f2b(rs2) >> 24) & 0xff
 
+def _fsgn(s,rs1,msb): return b2f((msb & 0x80000000) | (f2b(rs1) & 0x7fffffff))
+def FSGNJ_S (s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1,  f2b(rs2));           _pc(s)
+def FSGNJN_S(s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1, ~f2b(rs2));           _pc(s)
+def FSGNJX_S(s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1, f2b(rs2) ^ f2b(rs1)); _pc(s)
+
 def FCVT_S_W (s,rd,rs1): s.f[rd] = np.float32(   s.x[rs1]);   _pc(s)
 def FCVT_S_WU(s,rd,rs1): s.f[rd] = np.float32(_u(s.x[rs1]));  _pc(s)
 def FCVT_W_S (s,rd,rs1): s.x[rd] = np.int32  (   s.f[rs1]);   _pc(s)
 def FCVT_WU_S(s,rd,rs1): s.x[rd] = np.uint32 (   s.f[rs1]);   _pc(s)
 def FMV_W_X  (s,rd,rs1): s.f[rd] = b2f(s.x[rs1]);             _pc(s)
 def FMV_X_W  (s,rd,rs1): s.x[rd] = f2b(rs1);                  _pc(s)
-
-def _fsgn(s,rs1,msb): return b2f((msb & 0x80000000) | (f2b(rs1) & 0x7fffffff))
-def FSGNJ_S (s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1,  f2b(rs2));           _pc(s)
-def FSGNJN_S(s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1, ~f2b(rs2));           _pc(s)
-def FSGNJX_S(s,rd,rs1,rs2): s.f[rd] = _fsgn(s, rs1, f2b(rs2) ^ f2b(rs1)); _pc(s)
+def FCLASS_S (s,rd,rs1):
+  if   np.isneginf(s.f[rs1])    : s.x[rd] = 1
+  elif np.isposinf(s.f[rs1])    : s.x[rd] = 1 << 7
+  elif f2b(rs1) == 0x80000000   : s.x[rd] = 1 << 3
+  elif f2b(rs1) == 0            : s.x[rd] = 1 << 4
+  elif f2b(rs1) == 0x7f800001   : s.x[rd] = 1 << 8
+  elif f2b(rs1) == 0x7fc00000   : s.x[rd] = 1 << 9
+  elif (f2b(rs1) >> 23) == 0    : s.x[rd] = 1 << 5
+  elif (f2b(rs1) >> 23) == 0x100: s.x[rd] = 1 << 2
+  elif s.f[rs1] < 0.0           : s.x[rd] = 1 << 1
+  else                          : s.x[rd] = 1 << 6
+  _pc(s)
 
 # TODOs:
 #   - add rounding mode (rm) argument. Only rm = 0 is implemented right now.
 #     See experimental/rounding_modes.py for more details.
-#   - add missing instruction FCLASS
 #   - add floating point CSR register
 
 #-------------------------------------------------------------------------------
@@ -327,10 +338,10 @@ def dec(inst):
   elif f7_rs2 == '1100000_00000_000_1010011': FCVT_W_S (s, rd, rs1)
   elif f7_rs2 == '1100000_00001_000_1010011': FCVT_WU_S(s, rd, rs1)
   elif f7_rs2 == '1110000_00000_000_1010011': FMV_X_W  (s, rd, rs1)
+  elif f7_rs2 == '1110000_00000_001_1010011': FCLASS_S (s, rd, rs1)
   elif f7_rs2 == '1101000_00000_000_1010011': FCVT_S_W (s, rd, rs1)
   elif f7_rs2 == '1101000_00001_000_1010011': FCVT_S_WU(s, rd, rs1)
   elif f7_rs2 == '1111000_00000_000_1010011': FMV_W_X  (s, rd, rs1)
-
   else:
     print('ERROR: this instruction is not supported: ' + str(inst))
 
@@ -462,10 +473,10 @@ def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   elif inst == 'fcvt.w.s' : st = r_type('1100000', '000', '1010011', arg1, arg2, 0)
   elif inst == 'fcvt.wu.s': st = r_type('1100000', '000', '1010011', arg1, arg2, 1)
   elif inst == 'fmv.x.w'  : st = r_type('1110000', '000', '1010011', arg1, arg2, 0)
+  elif inst == 'fclass.s' : st = r_type('1110000', '001', '1010011', arg1, arg2, 0)
   elif inst == 'fcvt.s.w' : st = r_type('1101000', '000', '1010011', arg1, arg2, 0)
   elif inst == 'fcvt.s.wu': st = r_type('1101000', '000', '1010011', arg1, arg2, 1)
   elif inst == 'fmv.w.x'  : st = r_type('1111000', '000', '1010011', arg1, arg2, 0)
-
   else:
     print('ERROR: this instruction is not supported ' + inst)
 
