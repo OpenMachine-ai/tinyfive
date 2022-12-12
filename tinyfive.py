@@ -1,6 +1,6 @@
 import numpy as np
 import fnmatch
-from bitstring import Bits, pack
+from bitstring import Bits
 
 # TinyFive has two parts:
 #   - Part I defines all state and instructions of RISC-V (without the
@@ -259,7 +259,7 @@ dec_dict = {  # below is copied from table 24.2 of RISC-V ISA Spec Vol I
   '???????_?????_010_0100011': ['S',  'sw'       ],
   '???????_?????_000_0010011': ['I',  'addi'     ],
   '???????_?????_010_0010011': ['I',  'slti'     ],
-  '???????_?????_011_0010011': ['IU', 'sltiu'    ],
+  '???????_?????_011_0010011': ['I',  'sltiu'    ],
   '???????_?????_100_0010011': ['I',  'xori'     ],
   '???????_?????_110_0010011': ['I',  'ori'      ],
   '???????_?????_111_0010011': ['I',  'andi'     ],
@@ -333,6 +333,8 @@ def dec(inst):
            field(inst, 20, 20) + field(inst, 30, 21) + '0b0').int  # J-type
   opcode_str = f7 + '_' + rs2bin + '_' + f3 + '_' + opcode
 
+  # TODOs: rewrite above code so that we don't need bitstring package
+
   # decode instruction (opcode_str -> dec_inst)
   dec_inst = 0
   for k in dec_dict:
@@ -340,16 +342,16 @@ def dec(inst):
   if dec_inst == 0:
     print('ERROR: this instruction is not supported: ' + str(inst))
 
-  if   dec_inst == 'lui'      : LUI      (s, rd, imm_u)
-  elif dec_inst == 'auipc'    : AUIPC    (s, rd, imm_u)
-  elif dec_inst == 'jal'      : JAL      (s, rd, imm_j)
-  elif dec_inst == 'jalr'     : JALR     (s, rd, rs1, imm_i)
-  elif dec_inst == 'beq'      : BEQ      (s, rs1, rs2, imm_b)
-  elif dec_inst == 'bne'      : BNE      (s, rs1, rs2, imm_b)
-  elif dec_inst == 'blt'      : BLT      (s, rs1, rs2, imm_b)
-  elif dec_inst == 'bge'      : BGE      (s, rs1, rs2, imm_b)
-  elif dec_inst == 'bltu'     : BLTU     (s, rs1, rs2, imm_b)
-  elif dec_inst == 'bgeu'     : BGEU     (s, rs1, rs2, imm_b)
+  if   dec_inst == 'lui'      : LUI      (s, rd,  imm_u)
+  elif dec_inst == 'auipc'    : AUIPC    (s, rd,  imm_u)
+  elif dec_inst == 'jal'      : JAL      (s, rd,  imm_j)
+  elif dec_inst == 'jalr'     : JALR     (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'beq'      : BEQ      (s, rs1, rs2,   imm_b)
+  elif dec_inst == 'bne'      : BNE      (s, rs1, rs2,   imm_b)
+  elif dec_inst == 'blt'      : BLT      (s, rs1, rs2,   imm_b)
+  elif dec_inst == 'bge'      : BGE      (s, rs1, rs2,   imm_b)
+  elif dec_inst == 'bltu'     : BLTU     (s, rs1, rs2,   imm_b)
+  elif dec_inst == 'bgeu'     : BGEU     (s, rs1, rs2,   imm_b)
   elif dec_inst == 'lb'       : LB       (s, rd,  imm_i, rs1)
   elif dec_inst == 'lh'       : LH       (s, rd,  imm_i, rs1)
   elif dec_inst == 'lw'       : LW       (s, rd,  imm_i, rs1)
@@ -358,61 +360,61 @@ def dec(inst):
   elif dec_inst == 'sb'       : SB       (s, rs2, imm_s, rs1)
   elif dec_inst == 'sh'       : SH       (s, rs2, imm_s, rs1)
   elif dec_inst == 'sw'       : SW       (s, rs2, imm_s, rs1)
-  elif dec_inst == 'addi'     : ADDI     (s, rd, rs1, imm_i)
-  elif dec_inst == 'slti'     : SLTI     (s, rd, rs1, imm_i)
-  elif dec_inst == 'sltiu'    : SLTIU    (s, rd, rs1, imm_i)
-  elif dec_inst == 'xori'     : XORI     (s, rd, rs1, imm_i)
-  elif dec_inst == 'ori'      : ORI      (s, rd, rs1, imm_i)
-  elif dec_inst == 'andi'     : ANDI     (s, rd, rs1, imm_i)
-  elif dec_inst == 'slli'     : SLLI     (s, rd, rs1, rs2)
-  elif dec_inst == 'srli'     : SRLI     (s, rd, rs1, rs2)
-  elif dec_inst == 'srai'     : SRAI     (s, rd, rs1, rs2)
-  elif dec_inst == 'add'      : ADD      (s, rd, rs1, rs2)
-  elif dec_inst == 'sub'      : SUB      (s, rd, rs1, rs2)
-  elif dec_inst == 'sll'      : SLL      (s, rd, rs1, rs2)
-  elif dec_inst == 'slt'      : SLT      (s, rd, rs1, rs2)
-  elif dec_inst == 'sltu'     : SLTU     (s, rd, rs1, rs2)
-  elif dec_inst == 'xor'      : XOR      (s, rd, rs1, rs2)
-  elif dec_inst == 'srl'      : SRL      (s, rd, rs1, rs2)
-  elif dec_inst == 'sra'      : SRA      (s, rd, rs1, rs2)
-  elif dec_inst == 'or'       : OR       (s, rd, rs1, rs2)
-  elif dec_inst == 'and'      : AND      (s, rd, rs1, rs2)
+  elif dec_inst == 'addi'     : ADDI     (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'slti'     : SLTI     (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'sltiu'    : SLTIU    (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'xori'     : XORI     (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'ori'      : ORI      (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'andi'     : ANDI     (s, rd,  rs1,   imm_i)
+  elif dec_inst == 'slli'     : SLLI     (s, rd,  rs1,   rs2)
+  elif dec_inst == 'srli'     : SRLI     (s, rd,  rs1,   rs2)
+  elif dec_inst == 'srai'     : SRAI     (s, rd,  rs1,   rs2)
+  elif dec_inst == 'add'      : ADD      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'sub'      : SUB      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'sll'      : SLL      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'slt'      : SLT      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'sltu'     : SLTU     (s, rd,  rs1,   rs2)
+  elif dec_inst == 'xor'      : XOR      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'srl'      : SRL      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'sra'      : SRA      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'or'       : OR       (s, rd,  rs1,   rs2)
+  elif dec_inst == 'and'      : AND      (s, rd,  rs1,   rs2)
   # M-extension
-  elif dec_inst == 'mul'      : MUL      (s, rd, rs1, rs2)
-  elif dec_inst == 'mulh'     : MULH     (s, rd, rs1, rs2)
-  elif dec_inst == 'mulhsu'   : MULHSU   (s, rd, rs1, rs2)
-  elif dec_inst == 'mulhu'    : MULHU    (s, rd, rs1, rs2)
-  elif dec_inst == 'div'      : DIV      (s, rd, rs1, rs2)
-  elif dec_inst == 'divu'     : DIVU     (s, rd, rs1, rs2)
-  elif dec_inst == 'rem'      : REM      (s, rd, rs1, rs2)
-  elif dec_inst == 'remu'     : REMU     (s, rd, rs1, rs2)
+  elif dec_inst == 'mul'      : MUL      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'mulh'     : MULH     (s, rd,  rs1,   rs2)
+  elif dec_inst == 'mulhsu'   : MULHSU   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'mulhu'    : MULHU    (s, rd,  rs1,   rs2)
+  elif dec_inst == 'div'      : DIV      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'divu'     : DIVU     (s, rd,  rs1,   rs2)
+  elif dec_inst == 'rem'      : REM      (s, rd,  rs1,   rs2)
+  elif dec_inst == 'remu'     : REMU     (s, rd,  rs1,   rs2)
   # F-extension
   elif dec_inst == 'flw.s'    : FLW_S    (s, rd,  imm_i, rs1)
   elif dec_inst == 'fsw.s'    : FSW_S    (s, rs2, imm_s, rs1)
-  elif dec_inst == 'fmadd.s'  : FMADD_S  (s, rd, rs1, rs2, rs3)
-  elif dec_inst == 'fmsub.s'  : FMSUB_S  (s, rd, rs1, rs2, rs3)
-  elif dec_inst == 'fnmsub.s' : FNMSUB_S (s, rd, rs1, rs2, rs3)
-  elif dec_inst == 'fnmadd.s' : FNMADD_S (s, rd, rs1, rs2, rs3)
-  elif dec_inst == 'fadd.s'   : FADD_S   (s, rd, rs1, rs2)
-  elif dec_inst == 'fsub.s'   : FSUB_S   (s, rd, rs1, rs2)
-  elif dec_inst == 'fmul.s'   : FMUL_S   (s, rd, rs1, rs2)
-  elif dec_inst == 'fdiv.s'   : FDIV_S   (s, rd, rs1, rs2)
-  elif dec_inst == 'fsgnj.s'  : FSGNJ_S  (s, rd, rs1, rs2)
-  elif dec_inst == 'fsgnjn.s' : FSGNJN_S (s, rd, rs1, rs2)
-  elif dec_inst == 'fsgnjx.s' : FSGNJX_S (s, rd, rs1, rs2)
-  elif dec_inst == 'fmin.s'   : FMIN_S   (s, rd, rs1, rs2)
-  elif dec_inst == 'fmax.s'   : FMAX_S   (s, rd, rs1, rs2)
-  elif dec_inst == 'feq.s'    : FEQ_S    (s, rd, rs1, rs2)
-  elif dec_inst == 'flt.s'    : FLT_S    (s, rd, rs1, rs2)
-  elif dec_inst == 'fle.s'    : FLE_S    (s, rd, rs1, rs2)
-  elif dec_inst == 'fsqrt.s'  : FSQRT_S  (s, rd, rs1)
-  elif dec_inst == 'fcvt.w.s' : FCVT_W_S (s, rd, rs1)
-  elif dec_inst == 'fcvt.wu.s': FCVT_WU_S(s, rd, rs1)
-  elif dec_inst == 'fmv.x.w'  : FMV_X_W  (s, rd, rs1)
-  elif dec_inst == 'fclass.s' : FCLASS_S (s, rd, rs1)
-  elif dec_inst == 'fcvt.s.w' : FCVT_S_W (s, rd, rs1)
-  elif dec_inst == 'fcvt.s.wu': FCVT_S_WU(s, rd, rs1)
-  elif dec_inst == 'fmv.w.x'  : FMV_W_X  (s, rd, rs1)
+  elif dec_inst == 'fmadd.s'  : FMADD_S  (s, rd,  rs1,   rs2, rs3)
+  elif dec_inst == 'fmsub.s'  : FMSUB_S  (s, rd,  rs1,   rs2, rs3)
+  elif dec_inst == 'fnmsub.s' : FNMSUB_S (s, rd,  rs1,   rs2, rs3)
+  elif dec_inst == 'fnmadd.s' : FNMADD_S (s, rd,  rs1,   rs2, rs3)
+  elif dec_inst == 'fadd.s'   : FADD_S   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fsub.s'   : FSUB_S   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fmul.s'   : FMUL_S   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fdiv.s'   : FDIV_S   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fsgnj.s'  : FSGNJ_S  (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fsgnjn.s' : FSGNJN_S (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fsgnjx.s' : FSGNJX_S (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fmin.s'   : FMIN_S   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fmax.s'   : FMAX_S   (s, rd,  rs1,   rs2)
+  elif dec_inst == 'feq.s'    : FEQ_S    (s, rd,  rs1,   rs2)
+  elif dec_inst == 'flt.s'    : FLT_S    (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fle.s'    : FLE_S    (s, rd,  rs1,   rs2)
+  elif dec_inst == 'fsqrt.s'  : FSQRT_S  (s, rd,  rs1)
+  elif dec_inst == 'fcvt.w.s' : FCVT_W_S (s, rd,  rs1)
+  elif dec_inst == 'fcvt.wu.s': FCVT_WU_S(s, rd,  rs1)
+  elif dec_inst == 'fmv.x.w'  : FMV_X_W  (s, rd,  rs1)
+  elif dec_inst == 'fclass.s' : FCLASS_S (s, rd,  rs1)
+  elif dec_inst == 'fcvt.s.w' : FCVT_S_W (s, rd,  rs1)
+  elif dec_inst == 'fcvt.s.wu': FCVT_S_WU(s, rd,  rs1)
+  elif dec_inst == 'fmv.w.x'  : FMV_W_X  (s, rd,  rs1)
 
 #-------------------------------------------------------------------------------
 # encode instruction (this is the inverse function of the dec() function above)
@@ -421,59 +423,48 @@ def dec(inst):
 # so that key = 'instruction', value = ['opcodes-string', 'format-type']
 enc_dict = {dec_dict[k][1]: [k, dec_dict[k][0]] for k in dec_dict}
 
-# TODOs: consider rewriting the bitstring packing/unpacking code, there is
-# perhaps a better way than bitstring (numpy's 'packbits' only works on uint8)
-
 def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   """encode instruction and write into mem[]"""
-  [opcode_str, ftype] = enc_dict[inst]
+  [opcode_str, typ] = enc_dict[inst]
   f7     = opcode_str[0:7]
   f2     = opcode_str[5:7]
-  rs2bin = opcode_str[8:13]
+  rs2c   = opcode_str[8:13]  # rs2-code
   f3     = opcode_str[14:17]
   opcode = opcode_str[18:25]
 
-  # IL-type is I-type with arguments 2 and 3 swapped (for load instructions)
-  # IU-type is same as I-type, but imm is unsigned (only needed for sltiu)
+  # swap arg2 and arg3 if typ == IL (this is needed for all load instructions)
+  if typ == 'IL':
+    arg2, arg3 = arg3, arg2
+    typ = 'I'
+
+  rd    = np.binary_repr(arg1, 5)
+  rs1   = np.binary_repr(arg2, 5)
+  rs2   = np.binary_repr(arg3, 5)
+  rs3   = np.binary_repr(arg4, 5)
+  imm20 = np.binary_repr(arg2, 20)
+  imm12 = np.binary_repr(arg3, 12)
+
+  # below table is copied from the spec with the following addition:
   # R2-type is same as R-type but with only 2 arguments
-  if ftype == 'U':
-    st = pack('int:20, uint:5, bin:7', arg2, arg1, opcode)
-  elif ftype == 'I':
-    st = pack('int:12, uint:5, bin:3, uint:5, bin:7', arg3, arg2, f3, arg1, opcode)
-  elif ftype == 'IU':
-    st = pack('uint:12, uint:5, bin:3, uint:5, bin:7', arg3, arg2, f3, arg1, opcode)
-  elif ftype == 'IL':
-    st = pack('int:12, uint:5, bin:3, uint:5, bin:7', arg2, arg3, f3, arg1, opcode)
-  elif ftype == 'R':
-    st = pack('bin:7, uint:5, uint:5, bin:3, uint:5, bin:7', f7, arg3, arg2, f3, arg1, opcode)
-  elif ftype == 'R2':
-    st = pack('bin:7, bin:5, uint:5, bin:3, uint:5, bin:7', f7, rs2bin, arg2, f3, arg1, opcode)
-  elif ftype == 'R4':
-    st = pack('uint:5, bin:2, uint:5, uint:5, bin:3, uint:5, bin:7',
-               arg4, f2, arg3, arg2, f3, arg1, opcode)
-  elif ftype == 'J':
-    im = Bits(int=arg2, length=21)
-    imm20    = field(im, 20, 20).uint
-    imm10_1  = field(im, 10,  1).uint
-    imm11    = field(im, 11, 11).uint
-    imm19_12 = field(im, 19, 12).uint
-    st = pack('uint:1, uint:10, uint:1, uint:8, uint:5, bin:7',
-               imm20, imm10_1, imm11, imm19_12, arg1, opcode)
-  elif ftype == 'B':
-    im = Bits(int=arg3, length=13)
-    imm12   = field(im, 12, 12).uint
-    imm10_5 = field(im, 10,  5).uint
-    imm4_1  = field(im,  4,  1).uint
-    imm11   = field(im, 11, 11).uint
-    st = pack('uint:1, uint:6, uint:5, uint:5, bin:3, uint:4, uint:1, bin:7',
-               imm12, imm10_5, arg2, arg1, f3, imm4_1, imm11, opcode)
-  elif ftype == 'S':
-    im = Bits(int=arg2, length=12)
-    st = pack('uint:7, uint:5, uint:5, bin:3, uint:5, bin:7',
-              field(im, 11, 5).uint, arg1, arg3, f3, field(im, 4, 0).uint, opcode)
+  if   typ == 'R' : st = f7        + rs2  + rs1 + f3 + rd + opcode
+  elif typ == 'R2': st = f7        + rs2c + rs1 + f3 + rd + opcode
+  elif typ == 'R4': st = rs3  + f2 + rs2  + rs1 + f3 + rd + opcode
+  elif typ == 'I' : st = imm12            + rs1 + f3 + rd + opcode
+  elif typ == 'U' : st = imm20                       + rd + opcode
+  elif typ == 'S':
+    im = np.binary_repr(arg2, 12)
+    st = field(im,11,5) + rd + rs2 + f3 + field(im,4,0) + opcode
+  elif typ == 'J':
+    im = np.binary_repr(arg2, 21)
+    st = field(im,20,20) + field(im,10,1) + field(im,11,11) + \
+         field(im,19,12) + rd + opcode
+  elif typ == 'B':
+    im = np.binary_repr(arg3, 13)
+    st = field(im,12,12) + field(im,10,5) + rs1 + rd + f3 + \
+         field(im,4,1) + field(im,11,11) + opcode
 
   # write instruction into memory at address 's.pc'
-  write_i32(s, st.int, s.pc)
+  write_i32(s, int(st, 2), s.pc)
   _pc(s)
 
 #-------------------------------------------------------------------------------
@@ -481,7 +472,7 @@ def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
 def exe(s, start, instructions):
   s.pc = start
   for i in range(0, instructions):
-    inst = read_i32(s, s.pc)
+    inst = read_i32(s, s.pc)  # fetch instruction from memory
     dec(Bits(uint=int(_u(inst)), length=32))
 
 #-------------------------------------------------------------------------------
