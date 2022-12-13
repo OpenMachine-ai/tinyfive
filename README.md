@@ -31,19 +31,19 @@ This is the quickest way to get started and should work on any machine.
 
 ### Running on your machine
 Clone the repo and install packages `numpy` and `fnmatch` as follows:
-```
+```bash
 git clone https://github.com/OpenMachine-ai/tinyfive.git
 cd tinyfive
 pip3 install numpy fnmatch
 ```
 
 To run the examples, type:
-```
+```bash
 python3 examples.py
 ```
 
 To run the test suite, type:
-```
+```bash
 python3 tests.py
 ```
 
