@@ -7,10 +7,13 @@ TinyFive is a simple RISC-V emulator and
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
+- Can be very fast if you only use the upper-case instructions defined in the 
+  [first 200 lines of tinyfive.py](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py#L1-L200)
 - [Fewer than 1000 lines](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py) of code (w/o tests and examples)
 - Uses NumPy for math
 
 ### Table of content
+- [Usage](#usage)
 - [Running in colab notebook](#running-in-colab-notebook)
 - [Running on your machine](#running-on-your-machine)
 - [Latest status](#latest-status)
@@ -18,18 +21,20 @@ TinyFive is a simple RISC-V emulator and
 - [References](#references)
 - [Tiny Tech promise](#tiny-tech-promise)
 
+### Usage
+TODO
+
 ### Running in colab notebook
 You can run TinyFive in
 [this colab notebook](https://colab.research.google.com/drive/1KXDPwSJmaOGefh5vAjrediwuiRf3wWa2?usp=sharing).
 This is the quickest way to get started and should work on any machine.
 
 ### Running on your machine
-Clone the repo and install packages `numpy` and `bitstring` as follows:
+Clone the repo and install packages `numpy` and `fnmatch` as follows:
 ```
 git clone https://github.com/OpenMachine-ai/tinyfive.git
 cd tinyfive
-pip3 install --upgrade pip
-pip3 install numpy bitstring
+pip3 install numpy fnmatch
 ```
 
 To run the examples, type:
