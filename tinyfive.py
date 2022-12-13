@@ -9,6 +9,26 @@ import fnmatch
 # Part I is sufficient for emulating RISC-V. Part II is only needed if you want
 # to emulate the instruction encoding of RISC-V.
 
+# Notes on speed:
+#  - TinyFive is not optimized for speed (but for ease-of-use and LOC).
+#  - You could use PyPy to speed it up (see e.g. the Pydgin paper for details).
+#  - If you only use the upper-case instructions such as ADD(), then TinyFive
+#    is very fast because there is no instruction decoding. And you should be
+#    able to accelerate it on a GPU or TPU like any other Python code that uses
+#    NumPy.
+#  - If you use the lower-case instructions with enc() and exe(), then
+#    execution of the enc() and dec() functions is slow as they involve look-up
+#    and string matching with O(n) complexity where 'n' is the total number of
+#    instructions. The current implementations of enc() and dec() are optimized
+#    for ease-of-use and readability. A faster implementation would collapse
+#    multiple look-ups into one look-up, optimize the pattern-matching for the
+#    instruction decoding (bits -> instruction), and change the order of the
+#    instructions so that more frequently used instructions are at the top of
+#    the list. Here is an older version of TinyFive with a faster dec() function
+#    that doesn't use fnmatch and that collapses two look-ups
+#    (bits -> instruction and instruction -> uppeer-case instruction):
+#    https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py
+
 #-------------------------------------------------------------------------------
 # Part I
 #-------------------------------------------------------------------------------
@@ -164,16 +184,16 @@ def FCVT_WU_S(s,rd,rs1): s.x[rd] = np.uint32 (   s.f[rs1]);   _pc(s)
 def FMV_W_X  (s,rd,rs1): s.f[rd] = b2f(s.x[rs1]);             _pc(s)
 def FMV_X_W  (s,rd,rs1): s.x[rd] = f2b(rs1);                  _pc(s)
 def FCLASS_S (s,rd,rs1):
-  if   np.isneginf(s.f[rs1])    : s.x[rd] = 1
-  elif np.isposinf(s.f[rs1])    : s.x[rd] = 1 << 7
-  elif f2b(rs1) == 0x80000000   : s.x[rd] = 1 << 3
-  elif f2b(rs1) == 0            : s.x[rd] = 1 << 4
-  elif f2b(rs1) == 0x7f800001   : s.x[rd] = 1 << 8
-  elif f2b(rs1) == 0x7fc00000   : s.x[rd] = 1 << 9
-  elif (f2b(rs1) >> 23) == 0    : s.x[rd] = 1 << 5
-  elif (f2b(rs1) >> 23) == 0x100: s.x[rd] = 1 << 2
-  elif s.f[rs1] < 0.0           : s.x[rd] = 1 << 1
-  else                          : s.x[rd] = 1 << 6
+  if   np.isneginf(s.f[rs1])    : s.x[rd] = 1       # negative infinity
+  elif np.isposinf(s.f[rs1])    : s.x[rd] = 1 << 7  # positive infinity
+  elif f2b(rs1) == 0x80000000   : s.x[rd] = 1 << 3  # -0
+  elif f2b(rs1) == 0            : s.x[rd] = 1 << 4  # +0
+  elif f2b(rs1) == 0x7f800001   : s.x[rd] = 1 << 8  # signaling NaN
+  elif f2b(rs1) == 0x7fc00000   : s.x[rd] = 1 << 9  # quiet NaN
+  elif (f2b(rs1) >> 23) == 0    : s.x[rd] = 1 << 5  # positive subnormal
+  elif (f2b(rs1) >> 23) == 0x100: s.x[rd] = 1 << 2  # negative subnormal
+  elif s.f[rs1] < 0.0           : s.x[rd] = 1 << 1  # negative normal
+  else                          : s.x[rd] = 1 << 6  # positive normal
   _pc(s)
 
 # TODOs:
@@ -381,10 +401,10 @@ def dec(bits):
   elif inst == 'fmv.w.x'  : FMV_W_X  (s, rd,  rs1)
 
 #-------------------------------------------------------------------------------
-# encode instruction (this is the inverse function of the dec() function above)
+# encode function (aka assembler, it's the inverse of the dec() function)
 
 # generate encoder dictionary by inverting the decoder dictionary
-# so that key = 'instruction', value = ['opcodes-string', 'format-type']
+# so that key = 'instruction' and value = ['opcode-bits', 'format-type']
 enc_dict = {dec_dict[k][1]: [k, dec_dict[k][0]] for k in dec_dict}
 
 def write_i32(s, x, addr):
@@ -415,27 +435,25 @@ def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
   rs1   = np.binary_repr(arg2, 5)
   rs2   = np.binary_repr(arg3, 5)
   rs3   = np.binary_repr(arg4, 5)
-  imm20 = np.binary_repr(arg2, 20)
-  imm12 = np.binary_repr(arg3, 12)
+  imm_i = np.binary_repr(arg3, 12)
+  imm_u = np.binary_repr(arg2, 20)
+  imm_s = np.binary_repr(arg2, 12)
+  imm_j = np.binary_repr(arg2, 21)
+  imm_b = np.binary_repr(arg3, 13)
 
   # below table is copied from the spec with the following addition:
-  # R2-type is same as R-type but with only 2 arguments
+  # R2-type is same as R-type but with only 2 arguments (rd and rs1)
   if   typ == 'R' : bits = f7       + rs2  + rs1 + f3 + rd + opcode
   elif typ == 'R2': bits = f7       + rs2c + rs1 + f3 + rd + opcode
   elif typ == 'R4': bits = rs3 + f2 + rs2  + rs1 + f3 + rd + opcode
-  elif typ == 'I' : bits = imm12           + rs1 + f3 + rd + opcode
-  elif typ == 'U' : bits = imm20                      + rd + opcode
-  elif typ == 'S':
-    im = np.binary_repr(arg2, 12)
-    bits = field(im,11,5) + rd + rs2 + f3 + field(im,4,0) + opcode
-  elif typ == 'J':
-    im = np.binary_repr(arg2, 21)
-    bits = field(im,20,20) + field(im,10,1) + field(im,11,11) + \
-           field(im,19,12) + rd + opcode
-  elif typ == 'B':
-    im = np.binary_repr(arg3, 13)
-    bits = field(im,12,12) + field(im,10,5) + rs1 + rd + f3 + \
-           field(im,4,1) + field(im,11,11) + opcode
+  elif typ == 'I' : bits = imm_i           + rs1 + f3 + rd + opcode
+  elif typ == 'U' : bits = imm_u                      + rd + opcode
+  elif typ == 'S' : bits = field(imm_s,11,5) + rd + rs2 + f3 + \
+                           field(imm_s,4,0) + opcode
+  elif typ == 'J' : bits = field(imm_j,20,20) + field(imm_j,10,1) + \
+                           field(imm_j,11,11) + field(imm_j,19,12) + rd + opcode
+  elif typ == 'B' : bits = field(imm_b,12,12) + field(imm_b,10,5) + rs1 + rd + \
+                           f3 + field(imm_b,4,1) + field(imm_b,11,11) + opcode
 
   # write instruction into memory at address 's.pc'
   write_i32(s, bits2u(bits), s.pc)
