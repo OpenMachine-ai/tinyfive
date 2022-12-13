@@ -7,7 +7,8 @@ TinyFive is a simple RISC-V emulator and
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
-- [Fewer than 1000 lines](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py) of code (w/o tests and examples).
+- [Fewer than 1000 lines](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py) of code (w/o tests and examples)
+- Uses NumPy for math
 
 ### Table of content
 - [Running in colab notebook](#running-in-colab-notebook)
@@ -62,8 +63,8 @@ The table below compares TinyFive with other ISS projects.
 | [riscvOVPsim](https://github.com/riscv-ovpsim/imperas-riscv-tests) | Imperas              | C         | Yes              | All           | |
 | [Whisper](https://github.com/chipsalliance/SweRV-ISS)              | Western Digital      | C, C++    | Yes | Almost all                 | |
 | [Sail Model](https://github.com/riscv/sail-riscv)                  | Cambridge, Edinburgh | Sail, C   | Yes | All                        | |
-| [PiMaker/rvc](https://github.com/PiMaker/rvc)                      | PiMaker              | C         |  ?  |                            | |
-| [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |  ?  | A, I, M, Zifencei, Zicsr   | < 1k |
+| [PiMaker/rvc](https://github.com/PiMaker/rvc)                      | PiMaker              | C         |     |                            | |
+| [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |     | A, I, M, Zifencei, Zicsr   | < 1k |
 
 ### References
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
@@ -88,7 +89,7 @@ Keep in mind that simplicity and size (in terms of number of instructions) is a 
 of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC
 stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V
 has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
-the "RISC-V Reader" book.
+the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf).
 
 <p align="center">
   <img src="https://github.com/OpenMachine-ai/tinyfive/blob/main/logo.jpg">
