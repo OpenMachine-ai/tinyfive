@@ -26,17 +26,17 @@ import softfloat as sf
 #   - Python2: https://docs.python.org/2/library/functions.html#round
 
 # SoftFloat:
-#   - it's used by Spike and other RISC-V ISSs as the golden reference (and
-#     also QEMU seems to be using and older version of SoftFloat, see here
-#     https://github.com/ucb-bar/berkeley-softfloat-3/issues/5 )
-#   - it uses the same rounding mode definitions as RISC-V (rm = 0,1,2,3,4)
-#   - however, the rounding mode is set as a global variable, which is set to
-#     0 by default and can't be changed when using the Python package. The only
-#     exception are the convert-to-integer functions such as f32_to_i32, which
-#     have a rounding mode argument.
 #   - http://www.jhauser.us/arithmetic/SoftFloat.html
 #   - https://github.com/ucb-bar/berkeley-softfloat-3
 #   - Python package https://gitlab.com/cerlane/SoftFloat-Python
+#   - It's used by Spike and other RISC-V ISSs as the golden reference (and
+#     also QEMU seems to be using an older version of SoftFloat, see here
+#     https://github.com/ucb-bar/berkeley-softfloat-3/issues/5 )
+#   - It uses the same rounding mode definitions as RISC-V (rm = 0,1,2,3,4)
+#   - However, the rounding mode is set as a global variable, which is set to
+#     0 by default and can't be changed when using the Python package. The only
+#     exception are the convert-to-integer functions such as f32_to_i32, which
+#     have a rounding mode argument.
 
 #-------------------------------------------------------------------------------
 # rounding to int

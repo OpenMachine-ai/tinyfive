@@ -9,26 +9,6 @@ import fnmatch
 # Part I is sufficient for emulating RISC-V. Part II is only needed if you want
 # to emulate the instruction encoding of RISC-V.
 
-# Notes on speed:
-#  - TinyFive is not optimized for speed (but for ease-of-use and LOC).
-#  - You could use PyPy to speed it up (see e.g. the Pydgin paper for details).
-#  - If you only use the upper-case instructions such as ADD(), then TinyFive
-#    is very fast because there is no instruction decoding. And you should be
-#    able to accelerate it on a GPU or TPU like any other Python code that uses
-#    NumPy.
-#  - If you use the lower-case instructions with enc() and exe(), then
-#    execution of the enc() and dec() functions is slow as they involve look-up
-#    and string matching with O(n) complexity where 'n' is the total number of
-#    instructions. The current implementations of enc() and dec() are optimized
-#    for ease-of-use and readability. A faster implementation would collapse
-#    multiple look-ups into one look-up, optimize the pattern-matching for the
-#    instruction decoding (bits -> instruction), and change the order of the
-#    instructions so that more frequently used instructions are at the top of
-#    the list. Here is an older version of TinyFive with a faster dec() function
-#    that doesn't use fnmatch and that collapses two look-ups
-#    (bits -> instruction and instruction -> uppeer-case instruction):
-#    https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py
-
 #-------------------------------------------------------------------------------
 # Part I
 #-------------------------------------------------------------------------------
@@ -200,6 +180,11 @@ def FCLASS_S (s,rd,rs1):
 #   - add rounding mode (rm) argument. Only rm = 0 is implemented right now.
 #     See experimental/rounding_modes.py for more details.
 #   - add floating point CSR register
+
+#-------------------------------------------------------------------------------
+# Xom-extension
+
+# TODO: add OpenMachine custom instructions here
 
 #-------------------------------------------------------------------------------
 # Part II
@@ -431,6 +416,14 @@ def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
     arg2, arg3 = arg3, arg2
     typ = 'I'
 
+  # for branch and jump instructions with relative immediates, calculate the
+  # immediate value by subtracting the current PC value from arg3 or arg2, resp.
+  # TODO: double-check and verify this, especially for AUIPC and JAL
+  if typ == 'B':
+    arg3 -= s.pc
+  if inst in ['auipc', 'jal']:
+    arg2 -= s.pc
+
   rd    = np.binary_repr(arg1, 5)
   rs1   = np.binary_repr(arg2, 5)
   rs2   = np.binary_repr(arg3, 5)
@@ -497,7 +490,18 @@ def LI(s, rd, imm):
 # TODO: add more pseudoinstructions
 
 #-------------------------------------------------------------------------------
-# useful functions for accessing state and memory
+# useful functions for accessing state and memory and assembly-code labels
+
+s.label_dict = {}  # labels dictionary (for assembly-code labels)
+
+def label(s, name):
+  """add new label 'name' to the labels dictionary"""
+  s.label_dict.update({name: s.pc})
+
+def labels(s, name):
+  """return address of label 'name' """
+  return s.label_dict[name]
+
 def clear_cpu(s):
   s.x = np.zeros(32, dtype=np.int32)
   s.pc = 0
