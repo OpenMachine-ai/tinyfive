@@ -68,12 +68,12 @@ print(s.x[10])
 ```
 
 ### Example 2: Add two vectors
-We are using the following memory map for adding two 8-element vectors `res[] := a[] + b[]`, where each vector element is 32-bit wide (i.e. each element occupies 4 byte-addresses in memory).
+We are using the following memory map for adding two 8-element vectors `res[] := a[] + b[]`, where each vector element is 32 bits wide (i.e. each element occupies 4 byte-addresses in memory).
 | Byte address | Contents |
 | ------------ | -------- |
-|  0   .. 4\*7   | a-vector: `a[0]` is at address 0, .., `a[7]` is at address 4\*7 |
-| 4\*8  .. 4\*15 | b-vector: `b[0]` is at address 4\*8, .., `b[7]` is at address 4\*15 |
-| 4\*16 .. 4\*23 | result-vector: `res[0]` is at address 4\*16, .., `res[7]` is at address 4\*23 |
+|  0   .. 4\*7   | a-vector: `a[0]` is at address 0, `a[7]` is at address 4\*7 |
+| 4\*8  .. 4\*15 | b-vector: `b[0]` is at address 4\*8, `b[7]` is at address 4\*15 |
+| 4\*16 .. 4\*23 | result-vector: `res[0]` is at address 4\*16, `res[7]` is at address 4\*23 |
 
 **Example 2.1:** Use upper-case instructions (option A).
 ```python
@@ -121,7 +121,7 @@ ref = a + b                     # golden reference: simply add a[] + b[]
 print(res - ref)                # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
-**Example 2.3:** Same as example 2.3, but now use `enc()` and `exe()` functions with branch instructions (option C).
+**Example 2.3:** Same as example 2.2, but now use `enc()` and `exe()` functions with branch instructions (option C).
 ```python
 # generate 8-element vectors a[] and b[] and store them in memory
 a = np.random.randint(100, size=8)
