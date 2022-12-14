@@ -75,7 +75,7 @@ We are using the following memory map for adding two 8-element vectors `res[] :=
 | 4\*8  .. 4\*15 | b-vector: `b[0]` is at address 4\*8, `b[7]` is at address 4\*15 |
 | 4\*16 .. 4\*23 | result-vector: `res[0]` is at address 4\*16, `res[7]` is at address 4\*23 |
 
-**Example 2.1:** Use upper-case instructions (option A).
+**Example 2.1:** Use upper-case instructions (option A) with Python for-loop.
 ```python
 # generate 8-element vectors a[] and b[] and store them in memory
 a = np.random.randint(100, size=8)
