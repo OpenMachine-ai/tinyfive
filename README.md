@@ -180,11 +180,9 @@ python3 tests.py
 ```
 
 ## Speed
-- TinyFive is not optimized for speed (but for ease-of-use and LOC).
-- You could use PyPy to speed it up (see e.g. the Pydgin paper for details).
-- If you only use the upper-case instructions such as `ADD()`, then TinyFive
-  is very fast because there is no instruction decoding. And you should be
-  able to accelerate it on a GPU or TPU.
+- TinyFive is not optimized for speed (but for ease-of-use and [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)).
+- You could use PyPy to speed it up (see e.g. the [Pydgin paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) for details).
+- If you only use the upper-case instructions such as `ADD()`, then TinyFive is very fast because there is no instruction decoding. And you should be able to accelerate it on a GPU or TPU.
 - If you use the lower-case instructions with `enc()` and `exe()`, then
   execution of these functions is slow as they involve look-up
   and string matching with O(n) complexity where "n" is the total number of
