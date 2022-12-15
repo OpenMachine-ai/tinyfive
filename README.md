@@ -8,8 +8,8 @@ TinyFive is a simple RISC-V emulator and
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
 - Can be very fast if you only use the upper-case instructions defined in the 
-  [first 200 lines of tinyfive.py](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py#L1-L200)
-- [Fewer than 1000 lines](https://github.com/OpenMachine-ai/tinyfive/blob/main/tinyfive.py) of code (w/o tests and examples)
+  [first ~200 lines of tinyfive.py](tinyfive.py#L1-L200)
+- [Fewer than 1000 lines](tinyfive.py) of code (w/o tests and examples)
 - Uses NumPy for math
 
 ## Table of content
@@ -154,7 +154,7 @@ print(res - ref)                # print difference (should be all-zero)
 ```
 
 ### Example 3: Multiply two matrices
-TODO
+Coming soon
 
 ## Running in colab notebook
 You can run TinyFive in
@@ -168,12 +168,10 @@ git clone https://github.com/OpenMachine-ai/tinyfive.git
 cd tinyfive
 pip3 install numpy fnmatch
 ```
-
 To run the examples, type:
 ```bash
 python3 examples.py
 ```
-
 To run the test suite, type:
 ```bash
 python3 tests.py
