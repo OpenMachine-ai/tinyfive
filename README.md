@@ -7,8 +7,7 @@ TinyFive is a simple RISC-V emulator and
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
-- Can be very fast if you only use the upper-case instructions defined in the 
-  [first ~200 lines of tinyfive.py](tinyfive.py#L1-L200)
+- Can be very fast if you only use the upper-case instructions defined in the [first ~200 lines of tinyfive.py](tinyfive.py#L1-L200).
 - [Fewer than 1000 lines](tinyfive.py) of code (w/o tests and examples)
 - Uses NumPy for math
 
@@ -157,9 +156,7 @@ print(res - ref)                # print difference (should be all-zero)
 Coming soon
 
 ## Running in colab notebook
-You can run TinyFive in
-[this colab notebook](https://colab.research.google.com/drive/1KXDPwSJmaOGefh5vAjrediwuiRf3wWa2?usp=sharing).
-This is the quickest way to get started and should work on any machine.
+You can run TinyFive in [this colab notebook](https://colab.research.google.com/drive/1KXDPwSJmaOGefh5vAjrediwuiRf3wWa2?usp=sharing). This is the quickest way to get started and should work on any machine.
 
 ## Running on your machine
 Clone the repo and install packages `numpy` and `fnmatch` as follows:
@@ -181,28 +178,12 @@ python3 tests.py
 - TinyFive is not optimized for speed (but for ease-of-use and [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)).
 - You could use PyPy to speed it up (see e.g. the [Pydgin paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) for details).
 - If you only use the upper-case instructions such as `ADD()`, then TinyFive is very fast because there is no instruction decoding. And you should be able to accelerate it on a GPU or TPU.
-- If you use the lower-case instructions with `enc()` and `exe()`, then
-  execution of these functions is slow as they involve look-up
-  and string matching with O(n) complexity where "n" is the total number of
-  instructions. The current implementations of `enc()` and `dec()` are optimized
-  for ease-of-use and readability. A faster implementation would collapse
-  multiple look-ups into one look-up, optimize the pattern-matching for the
-  instruction decoding (bits -> instruction), and change the order of the
-  instructions so that more frequently used instructions are at the top of
-  the list. 
-  [Here is an older version](https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py) 
-  of TinyFive with a faster `dec()` function that collapses two look-ups
-  (`bits -> instruction` and `instruction -> uppeer-case instruction`)
-  and doesn't use `fnmatch`.  
+- If you use the lower-case instructions with `enc()` and `exe()`, then execution of these functions is slow as they involve look-up and string matching with O(n) complexity where "n" is the total number of instructions. The current implementations of `enc()` and `dec()` are optimized for ease-of-use and readability. A faster implementation would collapse multiple look-ups into one look-up, optimize the pattern-matching for the instruction decoding (bits -> instruction), and change the order of the instructions so that more frequently used instructions are at the top of the list. [Here is an older version](https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py) of TinyFive with a faster `dec()` function that collapses two look-ups (`bits -> instruction` and `instruction -> uppeer-case instruction`) and doesn't use `fnmatch`.  
 
 ## Latest status
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
-- 37 of the 40 base instructions (RV32I), all instructions of the M-extension (RV32M) and
-  the F-extension (RV32F) with the default rounding mode are already implemented, and many
-  of them are tested.  (The three missing RV32I instructions `fence`, `ebreak`, and `ecall`
-  are not applicable here.)
-- Remaining work: improve testing, add perhaps more extensions. See TODOs in the code for
-  more details.
+- 37 of the 40 base instructions (RV32I), all instructions of the M-extension (RV32M) and the F-extension (RV32F) with the default rounding mode are already implemented, and many of them are tested.  (The three missing RV32I instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
+- Remaining work: improve testing, add perhaps more extensions. See TODOs in the code for more details.
 
 ## Comparison
 The table below compares TinyFive with other ISS projects.
@@ -221,27 +202,14 @@ The table below compares TinyFive with other ISS projects.
 
 ## References
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
-- See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf)
- for a brief description of most instructions. See also the
- [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
-- Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman
-(2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions.
-The Spanish version of this book is
-[available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
+- See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf) for a brief description of most instructions. See also the [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
+- Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman (2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
 other free versions are [available here](http://riscvbook.com).
 - Pydgin [paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) and [video](https://youtu.be/-p_AGki7Vsk)
 - [Online simulator](https://ascslab.org/research/briscv/simulator/simulator.html) for debug
 
 ## Tiny Tech promise
-Similar to [tinygrad](https://github.com/geohot/tinygrad),
-[micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects,
-we believe that core technology should be simple and small (in terms of
-[LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure
-that the core of TinyFive (without tests and examples) will always be below 1000 lines.
-Keep in mind that simplicity and size (in terms of number of instructions) is a key feature
-of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC
-stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V
-has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
+Similar to [tinygrad](https://github.com/geohot/tinygrad), [micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines. Keep in mind that simplicity and size (in terms of number of instructions) is a key feature of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
 the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf).
 
 <p align="center">
