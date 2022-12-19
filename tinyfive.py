@@ -16,85 +16,7 @@ class tinyfive:
     s.x   = np.zeros(32, dtype=np.int32)        # reg file 'x[]' is signed int32
     s.f   = np.zeros(32, dtype=np.float32)      # reg file 'f[]' for F-extension
     s.pc  = 0
-    s.label_dict = {}  # labels dictionary (for assembly-code labels)
-    s.dec_dict = {  # the decoder dictionary is copied from table 24.2 of the spec
-      '???????_?????_???_0110111': ['U',  'lui'      ],
-      '???????_?????_???_0010111': ['U',  'auipc'    ],
-      '???????_?????_???_1101111': ['J',  'jal'      ],
-      '???????_?????_000_1100111': ['I',  'jalr'     ],
-      '???????_?????_000_1100011': ['B',  'beq'      ],
-      '???????_?????_001_1100011': ['B',  'bne'      ],
-      '???????_?????_100_1100011': ['B',  'blt'      ],
-      '???????_?????_101_1100011': ['B',  'bge'      ],
-      '???????_?????_110_1100011': ['B',  'bltu'     ],
-      '???????_?????_111_1100011': ['B',  'bgeu'     ],
-      '???????_?????_000_0000011': ['IL', 'lb'       ],
-      '???????_?????_001_0000011': ['IL', 'lh'       ],
-      '???????_?????_010_0000011': ['IL', 'lw'       ],
-      '???????_?????_100_0000011': ['IL', 'lbu'      ],
-      '???????_?????_101_0000011': ['IL', 'lhu'      ],
-      '???????_?????_000_0100011': ['S',  'sb'       ],
-      '???????_?????_001_0100011': ['S',  'sh'       ],
-      '???????_?????_010_0100011': ['S',  'sw'       ],
-      '???????_?????_000_0010011': ['I',  'addi'     ],
-      '???????_?????_010_0010011': ['I',  'slti'     ],
-      '???????_?????_011_0010011': ['I',  'sltiu'    ],
-      '???????_?????_100_0010011': ['I',  'xori'     ],
-      '???????_?????_110_0010011': ['I',  'ori'      ],
-      '???????_?????_111_0010011': ['I',  'andi'     ],
-      '0000000_?????_001_0010011': ['R',  'slli'     ],  # use R-type (not I-type)
-      '0000000_?????_101_0010011': ['R',  'srli'     ],  # use R-type (not I-type)
-      '0100000_?????_101_0010011': ['R',  'srai'     ],  # use R-type (not I-type)
-      '0000000_?????_000_0110011': ['R',  'add'      ],
-      '0100000_?????_000_0110011': ['R',  'sub'      ],
-      '0000000_?????_001_0110011': ['R',  'sll'      ],
-      '0000000_?????_010_0110011': ['R',  'slt'      ],
-      '0000000_?????_011_0110011': ['R',  'sltu'     ],
-      '0000000_?????_100_0110011': ['R',  'xor'      ],
-      '0000000_?????_101_0110011': ['R',  'srl'      ],
-      '0100000_?????_101_0110011': ['R',  'sra'      ],
-      '0000000_?????_110_0110011': ['R',  'or'       ],
-      '0000000_?????_111_0110011': ['R',  'and'      ],
-      # M-extension
-      '0000001_?????_000_0110011': ['R',  'mul'      ],
-      '0000001_?????_001_0110011': ['R',  'mulh'     ],
-      '0000001_?????_010_0110011': ['R',  'mulhsu'   ],
-      '0000001_?????_011_0110011': ['R',  'mulhu'    ],
-      '0000001_?????_100_0110011': ['R',  'div'      ],
-      '0000001_?????_101_0110011': ['R',  'divu'     ],
-      '0000001_?????_110_0110011': ['R',  'rem'      ],
-      '0000001_?????_111_0110011': ['R',  'remu'     ],
-      # F-extension
-      '???????_?????_010_0000111': ['IL', 'flw.s'    ],
-      '???????_?????_010_0100111': ['S',  'fsw.s'    ],
-      '?????00_?????_000_1000011': ['R4', 'fmadd.s'  ],
-      '?????00_?????_000_1000111': ['R4', 'fmsub.s'  ],
-      '?????00_?????_000_1001011': ['R4', 'fnmsub.s' ],
-      '?????00_?????_000_1001111': ['R4', 'fnmadd.s' ],
-      '0000000_?????_000_1010011': ['R',  'fadd.s'   ],
-      '0000100_?????_000_1010011': ['R',  'fsub.s'   ],
-      '0001000_?????_000_1010011': ['R',  'fmul.s'   ],
-      '0001100_?????_000_1010011': ['R',  'fdiv.s'   ],
-      '0101100_00000_000_1010011': ['R2', 'fsqrt.s'  ],
-      '0010000_?????_000_1010011': ['R',  'fsgnj.s'  ],
-      '0010000_?????_001_1010011': ['R',  'fsgnjn.s' ],
-      '0010000_?????_010_1010011': ['R',  'fsgnjx.s' ],
-      '0010100_?????_000_1010011': ['R',  'fmin.s'   ],
-      '0010100_?????_001_1010011': ['R',  'fmax.s'   ],
-      '1100000_00000_000_1010011': ['R2', 'fcvt.w.s' ],
-      '1100000_00001_000_1010011': ['R2', 'fcvt.wu.s'],
-      '1110000_00000_000_1010011': ['R2', 'fmv.x.w'  ],
-      '1010000_?????_010_1010011': ['R',  'feq.s'    ],
-      '1010000_?????_001_1010011': ['R',  'flt.s'    ],
-      '1010000_?????_000_1010011': ['R',  'fle.s'    ],
-      '1110000_00000_001_1010011': ['R2', 'fclass.s' ],
-      '1101000_00000_000_1010011': ['R2', 'fcvt.s.w' ],
-      '1101000_00001_000_1010011': ['R2', 'fcvt.s.wu'],
-      '1111000_00000_000_1010011': ['R2', 'fmv.w.x'  ]}
-
-    # generate asm-dictionary by inverting the decoder dictionary
-    # so that key = 'instruction' and value = ['opcode-bits', 'format-type']
-    s.asm_dict = {s.dec_dict[k][1]: [k, s.dec_dict[k][0]] for k in s.dec_dict}
+    s.label_dict = {}  # label dictionary (for assembly-code labels)
 
   #-------------------------------------------------------------------------------
   # Part I
@@ -305,9 +227,9 @@ class tinyfive:
 
     # decode instruction (opcode_bits -> inst)
     inst = 0
-    for k in s.dec_dict:
+    for k in dec_dict:
       if fnmatch.fnmatch(opcode_bits, k):
-        inst = s.dec_dict[k][1]
+        inst = dec_dict[k][1]
         break  # to speed up run-time
     if inst == 0:
       print('ERROR: this instruction is not supported: ' + bits)
@@ -399,16 +321,19 @@ class tinyfive:
     for i in range(0, 3): ret += s.mem[addr + i] << i*8
     return ret
 
-  def calc_branch_imm(s, arg):
-    """calculate the immediate value by subtracting the current PC value from arg
-    TODO: double-check and verify this, especially for AUIPC and JAL"""
-    if isinstance(arg, str):  # look up label if argument is a string
+  def lbl(s, name):
+    """add new label 'name' to the label dictionary"""
+    s.label_dict.update({name: s.pc})
+
+  def look_up_label(s, arg):
+    """look up label if argument is a string"""
+    if isinstance(arg, str):
       arg = s.label_dict[arg]
-    return arg - s.pc
+    return arg
 
   def asm(s, inst, arg1, arg2, arg3=0, arg4=0):
     """encode instruction and write into mem[]"""
-    [opcode_bits, typ] = s.asm_dict[inst]
+    [opcode_bits, typ] = asm_dict[inst]
     f7     = opcode_bits[0:7]
     f2     = opcode_bits[5:7]
     rs2c   = opcode_bits[8:13]  # rs2-code
@@ -421,11 +346,14 @@ class tinyfive:
       typ = 'I'
 
     # for branch and jump instructions with relative immediates, look up label
-    # and calculate the immediate value
+    # and calculate the immediate value by subtracting the current PC value from arg
+    # TODO: double-check and verify this, especially for AUIPC and JAL
     if typ == 'B':
-      arg3 = s.calc_branch_imm(arg3)
+      arg3 = s.look_up_label(arg3)
+      arg3 -= s.pc
     if inst in ['auipc', 'jal']:
-      arg2 = s.calc_branch_imm(arg2)
+      arg2 = s.look_up_label(arg2)
+      arg2 -= s.pc
 
     rd    = np.binary_repr(arg1, 5)
     rs1   = np.binary_repr(arg2, 5)
@@ -455,13 +383,18 @@ class tinyfive:
     s.write_i32(s.bits2u(bits), s.pc)
     s.ipc()
 
-  #-------------------------------------------------------------------------------
-  # execute code from address 'start', stop execution after n instructions
-  def exe(s, start, instructions):
-    s.pc = start
-    for i in range(0, instructions):
-      inst = s.read_i32(s.pc)  # fetch instruction from memory
-      s.dec(np.binary_repr(s.u(inst), 32))
+  def exe(s, start, end=None, instructions=0):
+    """execute code from address 'start', stop execution after n 'instructions', or
+    stop when pc reaches 'end' address"""
+    s.pc = s.look_up_label(start)
+    if end is None:  # this is for the case where argument 'instructions' is used
+      for i in range(0, instructions):
+        inst = s.read_i32(s.pc)  # fetch instruction from memory
+        s.dec(np.binary_repr(s.u(inst), 32))
+    else:  # this is for the case where argument 'end' is used
+      while s.pc != s.look_up_label(end):
+        inst = s.read_i32(s.pc)  # fetch instruction from memory
+        s.dec(np.binary_repr(s.u(inst), 32))
 
   #-------------------------------------------------------------------------------
   # pseudoinstructions
@@ -472,11 +405,7 @@ class tinyfive:
   # TODO: add more pseudoinstructions
 
   #-------------------------------------------------------------------------------
-  # useful functions for accessing state and memory and assembly-code labels
-
-  def lbl(s, name):
-    """add new label 'name' to the label dictionary"""
-    s.label_dict.update({name: s.pc})
+  # useful functions for accessing state and memory
 
   def clear_cpu(s):
     s.x = np.zeros(32, dtype=np.int32)
@@ -511,7 +440,90 @@ class tinyfive:
       print("x[%2d]: %4d" % (i, s.x[i]))
 
 #---------------------------------------------------------------------------------
+# Only needed for Part II: dictionaries for decoder and assembler
+#---------------------------------------------------------------------------------
+dec_dict = {  # the decoder dictionary is copied from table 24.2 of the spec
+  '???????_?????_???_0110111': ['U',  'lui'      ],
+  '???????_?????_???_0010111': ['U',  'auipc'    ],
+  '???????_?????_???_1101111': ['J',  'jal'      ],
+  '???????_?????_000_1100111': ['I',  'jalr'     ],
+  '???????_?????_000_1100011': ['B',  'beq'      ],
+  '???????_?????_001_1100011': ['B',  'bne'      ],
+  '???????_?????_100_1100011': ['B',  'blt'      ],
+  '???????_?????_101_1100011': ['B',  'bge'      ],
+  '???????_?????_110_1100011': ['B',  'bltu'     ],
+  '???????_?????_111_1100011': ['B',  'bgeu'     ],
+  '???????_?????_000_0000011': ['IL', 'lb'       ],
+  '???????_?????_001_0000011': ['IL', 'lh'       ],
+  '???????_?????_010_0000011': ['IL', 'lw'       ],
+  '???????_?????_100_0000011': ['IL', 'lbu'      ],
+  '???????_?????_101_0000011': ['IL', 'lhu'      ],
+  '???????_?????_000_0100011': ['S',  'sb'       ],
+  '???????_?????_001_0100011': ['S',  'sh'       ],
+  '???????_?????_010_0100011': ['S',  'sw'       ],
+  '???????_?????_000_0010011': ['I',  'addi'     ],
+  '???????_?????_010_0010011': ['I',  'slti'     ],
+  '???????_?????_011_0010011': ['I',  'sltiu'    ],
+  '???????_?????_100_0010011': ['I',  'xori'     ],
+  '???????_?????_110_0010011': ['I',  'ori'      ],
+  '???????_?????_111_0010011': ['I',  'andi'     ],
+  '0000000_?????_001_0010011': ['R',  'slli'     ],  # use R-type (not I-type)
+  '0000000_?????_101_0010011': ['R',  'srli'     ],  # use R-type (not I-type)
+  '0100000_?????_101_0010011': ['R',  'srai'     ],  # use R-type (not I-type)
+  '0000000_?????_000_0110011': ['R',  'add'      ],
+  '0100000_?????_000_0110011': ['R',  'sub'      ],
+  '0000000_?????_001_0110011': ['R',  'sll'      ],
+  '0000000_?????_010_0110011': ['R',  'slt'      ],
+  '0000000_?????_011_0110011': ['R',  'sltu'     ],
+  '0000000_?????_100_0110011': ['R',  'xor'      ],
+  '0000000_?????_101_0110011': ['R',  'srl'      ],
+  '0100000_?????_101_0110011': ['R',  'sra'      ],
+  '0000000_?????_110_0110011': ['R',  'or'       ],
+  '0000000_?????_111_0110011': ['R',  'and'      ],
+  # M-extension
+  '0000001_?????_000_0110011': ['R',  'mul'      ],
+  '0000001_?????_001_0110011': ['R',  'mulh'     ],
+  '0000001_?????_010_0110011': ['R',  'mulhsu'   ],
+  '0000001_?????_011_0110011': ['R',  'mulhu'    ],
+  '0000001_?????_100_0110011': ['R',  'div'      ],
+  '0000001_?????_101_0110011': ['R',  'divu'     ],
+  '0000001_?????_110_0110011': ['R',  'rem'      ],
+  '0000001_?????_111_0110011': ['R',  'remu'     ],
+  # F-extension
+  '???????_?????_010_0000111': ['IL', 'flw.s'    ],
+  '???????_?????_010_0100111': ['S',  'fsw.s'    ],
+  '?????00_?????_000_1000011': ['R4', 'fmadd.s'  ],
+  '?????00_?????_000_1000111': ['R4', 'fmsub.s'  ],
+  '?????00_?????_000_1001011': ['R4', 'fnmsub.s' ],
+  '?????00_?????_000_1001111': ['R4', 'fnmadd.s' ],
+  '0000000_?????_000_1010011': ['R',  'fadd.s'   ],
+  '0000100_?????_000_1010011': ['R',  'fsub.s'   ],
+  '0001000_?????_000_1010011': ['R',  'fmul.s'   ],
+  '0001100_?????_000_1010011': ['R',  'fdiv.s'   ],
+  '0101100_00000_000_1010011': ['R2', 'fsqrt.s'  ],
+  '0010000_?????_000_1010011': ['R',  'fsgnj.s'  ],
+  '0010000_?????_001_1010011': ['R',  'fsgnjn.s' ],
+  '0010000_?????_010_1010011': ['R',  'fsgnjx.s' ],
+  '0010100_?????_000_1010011': ['R',  'fmin.s'   ],
+  '0010100_?????_001_1010011': ['R',  'fmax.s'   ],
+  '1100000_00000_000_1010011': ['R2', 'fcvt.w.s' ],
+  '1100000_00001_000_1010011': ['R2', 'fcvt.wu.s'],
+  '1110000_00000_000_1010011': ['R2', 'fmv.x.w'  ],
+  '1010000_?????_010_1010011': ['R',  'feq.s'    ],
+  '1010000_?????_001_1010011': ['R',  'flt.s'    ],
+  '1010000_?????_000_1010011': ['R',  'fle.s'    ],
+  '1110000_00000_001_1010011': ['R2', 'fclass.s' ],
+  '1101000_00000_000_1010011': ['R2', 'fcvt.s.w' ],
+  '1101000_00001_000_1010011': ['R2', 'fcvt.s.wu'],
+  '1111000_00000_000_1010011': ['R2', 'fmv.w.x'  ]}
+
+# generate assembler dictionary by inverting the decoder dictionary
+# so that key = 'instruction' and value = ['opcode-bits', 'format-type']
+asm_dict = {dec_dict[k][1]: [k, dec_dict[k][0]] for k in dec_dict}
+
+#---------------------------------------------------------------------------------
 # assembler mnemonics
+#---------------------------------------------------------------------------------
 x0  = 0;  x1  = 1;  x2  = 2;  x3  = 3;  x4  = 4;  x5  = 5;  x6  = 6;  x7  = 7
 x8  = 8;  x9  = 9;  x10 = 10; x11 = 11; x12 = 12; x13 = 13; x14 = 14; x15 = 15
 x16 = 16; x17 = 17; x18 = 18; x19 = 19; x20 = 20; x21 = 21; x22 = 22; x23 = 23

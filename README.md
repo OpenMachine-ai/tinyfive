@@ -2,7 +2,7 @@
 
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 
-TinyFive is a simple RISC-V emulator, [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) and assembler written entirely in Python:
+TinyFive is a simple RISC-V emulator, [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator), and assembler written entirely in Python:
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
@@ -125,7 +125,7 @@ ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
-**Example 2.3:** Same as example 2.2, but now use `asm()` and `exe()` functions with branch instructions (option C).
+**Example 2.3:** Same as example 2.2, but now use `asm()` and `exe()` functions with branch instructions (option C). The `lbl()` function defines labels, which are symbolic names that represent memory addresses. These labels are used for easier readability, especially for branch instructions and to mark the start and end of the assembly code executed by the `exe()` function.
 ```python
 # generate 8-element vectors a[] and b[] and store them in memory
 a = np.random.randint(100, size=8)
@@ -137,18 +137,20 @@ m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 m.pc = 4*48
 # x[13] is the loop-variable that is incremented by 4: 0, 4, .., 28
 # x[14] is the constant 28+4 = 32 for detecting the end of the for-loop
+m.lbl('start')                 # define label 'start'
 m.asm('add',  13, 0, 0)        # x[13] := x[0] + x[0] = 0 (because x[0] is always 0)
 m.asm('addi', 14, 0, 32)       # x[14] := x[0] + 32 = 32 (because x[0] is always 0)
-m.lbl('loop')                  # define label "loop"
+m.lbl('loop')                  # label 'loop'
 m.asm('lw',   11, 0,    13)    # load x[11] with a[] from mem[0 + x[13]]
 m.asm('lw',   12, 4*8,  13)    # load x[12] with b[] from mem[4*8 + x[13]]
 m.asm('add',  10, 11,   12)    # x[10] := x[11] + x[12]
 m.asm('sw',   10, 4*16, 13)    # store x[10] in mem[4*16 + x[13]]
 m.asm('addi', 13, 13,   4)     # x[13] := x[13] + 4 (increment x[13] by 4)
 m.asm('bne',  13, 14, 'loop')  # branch to 'loop' if x[13] != x[14]
+m.lbl('end')                   # label 'end'
 
-# execute program from address 4*48: execute 2+8*6 instructions and then stop
-m.exe(start=4*48, instructions=2+8*6)
+# execute program: start at label 'start', stop when label 'end' is reached
+m.exe(start='start', end='end')
 
 # compare results against golden reference
 res = m.read_i32_vec(8, 4*16)  # read result vector from address 4*16
@@ -191,7 +193,7 @@ python3 tests.py
 - Remaining work: improve testing, add perhaps more extensions. See TODOs in the code for more details.
 
 ## Comparison
-The table below compares TinyFive with other ISS projects.
+The table below compares TinyFive with other ISS and emulator projects.
 
 | ISS | Author | Language | Mature? | Extensions | LOC |
 | --- | ------ | -------- | ------- | ---------- | --- |
