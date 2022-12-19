@@ -2,10 +2,9 @@
 
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 
-TinyFive is a simple RISC-V emulator and
-[ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) written entirely in Python:
+TinyFive is a simple RISC-V emulator, [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) and assembler written entirely in Python:
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
-- TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
+- TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
 - Can be very fast if you only use the upper-case instructions defined in the [first ~200 lines of tinyfive.py](tinyfive.py#L1-L200).
 - [Fewer than 1000 lines](tinyfive.py) of code (w/o tests and examples)
@@ -27,8 +26,8 @@ TinyFive is a simple RISC-V emulator and
 ## Usage
 TinyFive can be used in the following three ways:
 - **Option A:** Use upper-case instructions such as `ADD()` and `MUL()`, see examples 1.1, 1.2, and 2.1 below.
-- **Option B:** Use `enc()` and `exe()` functions without branch instructions, see examples 1.3 and 2.2 below.
-- **Option C:** Use `enc()` and `exe()` functions with branch instructions, see example 2.3 below.
+- **Option B:** Use `asm()` and `exe()` functions without branch instructions, see examples 1.3 and 2.2 below.
+- **Option C:** Use `asm()` and `exe()` functions with branch instructions, see example 2.3 below.
 
 For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 1KB of memory as follows:
 ```python
@@ -55,16 +54,16 @@ m.MUL(10, 11, 12)  # x[10] := x[11] * x[12]
 print(m.x[10])
 # Output: 42
 ```
-**Example 1.3:** Same as example 1.2, but now use `enc()` and `exe()` (option B). The `enc()` function (aka assembler) takes an instruction and converts it into machine code and stores it in memory at address `s.pc`. Once the entire assembly program is written into memory `mem[]`, the `exe()` function (aka ISS) can then exectute the machine code stored in memory.
+**Example 1.3:** Same as example 1.2, but now use `asm()` and `exe()` (option B). The assembler function `asm()` function takes an instruction and converts it into machine code and stores it in memory at address `s.pc`. Once the entire assembly program is written into memory `mem[]`, the `exe()` function (aka ISS) can then exectute the machine code stored in memory.
 ```python
 m.write_i32(6, 0)  # manually write '6' into mem[0] (memory @ address 0)
 m.write_i32(7, 4)  # manually write '7' into mem[4] (memory @ address 4)
 
 # store assembly program in mem[] starting at address 4*20
 m.pc = 4*20
-m.enc('lw',  11, 0,  0)   # load register x[11] from mem[0 + 0]
-m.enc('lw',  12, 4,  0)   # load register x[12] from mem[4 + 0]
-m.enc('mul', 10, 11, 12)  # x[10] := x[11] * x[12]
+m.asm('lw',  11, 0,  0)   # load register x[11] from mem[0 + 0]
+m.asm('lw',  12, 4,  0)   # load register x[12] from mem[4 + 0]
+m.asm('mul', 10, 11, 12)  # x[10] := x[11] * x[12]
 
 # execute program from address 4*20: execute 3 instructions and then stop
 m.exe(start=4*20, instructions=3)
@@ -101,7 +100,7 @@ ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
-**Example 2.2**: Same as example 2.1, but now use `enc()` and `exe()` functions without branch instructions (option B).
+**Example 2.2**: Same as example 2.1, but now use `asm()` and `exe()` functions without branch instructions (option B).
 ```python
 # generate 8-element vectors a[] and b[] and store them in memory
 a = np.random.randint(100, size=8)
@@ -112,10 +111,10 @@ m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 # store assembly program in mem[] starting at address 4*48
 m.pc = 4*48
 for i in range(0, 8):
-  m.enc('lw',  11, 4*i,      0)   # load x[11] with a[i] from mem[4*i + 0]
-  m.enc('lw',  12, 4*(i+8),  0)   # load x[12] with b[i] from mem[4*(i+8) + 0]
-  m.enc('add', 10, 11,       12)  # x[10] := x[11] + x[12]
-  m.enc('sw',  10, 4*(i+16), 0)   # store results in mem[], starting at address 4*16
+  m.asm('lw',  11, 4*i,      0)   # load x[11] with a[i] from mem[4*i + 0]
+  m.asm('lw',  12, 4*(i+8),  0)   # load x[12] with b[i] from mem[4*(i+8) + 0]
+  m.asm('add', 10, 11,       12)  # x[10] := x[11] + x[12]
+  m.asm('sw',  10, 4*(i+16), 0)   # store results in mem[], starting at address 4*16
 
 # execute program from address 4*48: execute 8*4 instructions and then stop
 m.exe(start=4*48, instructions=8*4)
@@ -126,7 +125,7 @@ ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
-**Example 2.3:** Same as example 2.2, but now use `enc()` and `exe()` functions with branch instructions (option C).
+**Example 2.3:** Same as example 2.2, but now use `asm()` and `exe()` functions with branch instructions (option C).
 ```python
 # generate 8-element vectors a[] and b[] and store them in memory
 a = np.random.randint(100, size=8)
@@ -138,15 +137,15 @@ m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 m.pc = 4*48
 # x[13] is the loop-variable that is incremented by 4: 0, 4, .., 28
 # x[14] is the constant 28+4 = 32 for detecting the end of the for-loop
-m.enc('add',  13, 0, 0)      # x[13] := x[0] + x[0] = 0 (because x[0] is always 0)
-m.enc('addi', 14, 0, 32)     # x[14] := x[0] + 32 = 32 (because x[0] is always 0)
-m.label('loop')              # define label "loop"
-m.enc('lw',   11, 0,    13)  # load x[11] with a[] from mem[0 + x[13]]
-m.enc('lw',   12, 4*8,  13)  # load x[12] with b[] from mem[4*8 + x[13]]
-m.enc('add',  10, 11,   12)  # x[10] := x[11] + x[12]
-m.enc('sw',   10, 4*16, 13)  # store x[10] in mem[4*16 + x[13]]
-m.enc('addi', 13, 13,   4)   # x[13] := x[13] + 4 (increment x[13] by 4)
-m.enc('bne',  13, 14, m.labels('loop'))  # branch to 'loop' if x[13] != x[14]
+m.asm('add',  13, 0, 0)        # x[13] := x[0] + x[0] = 0 (because x[0] is always 0)
+m.asm('addi', 14, 0, 32)       # x[14] := x[0] + 32 = 32 (because x[0] is always 0)
+m.lbl('loop')                  # define label "loop"
+m.asm('lw',   11, 0,    13)    # load x[11] with a[] from mem[0 + x[13]]
+m.asm('lw',   12, 4*8,  13)    # load x[12] with b[] from mem[4*8 + x[13]]
+m.asm('add',  10, 11,   12)    # x[10] := x[11] + x[12]
+m.asm('sw',   10, 4*16, 13)    # store x[10] in mem[4*16 + x[13]]
+m.asm('addi', 13, 13,   4)     # x[13] := x[13] + 4 (increment x[13] by 4)
+m.asm('bne',  13, 14, 'loop')  # branch to 'loop' if x[13] != x[14]
 
 # execute program from address 4*48: execute 2+8*6 instructions and then stop
 m.exe(start=4*48, instructions=2+8*6)
@@ -184,7 +183,7 @@ python3 tests.py
 - TinyFive is not optimized for speed (but for ease-of-use and [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)).
 - You could use PyPy to speed it up (see e.g. the [Pydgin paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) for details).
 - If you only use the upper-case instructions such as `ADD()`, then TinyFive is very fast because there is no instruction decoding. And you should be able to accelerate it on a GPU or TPU.
-- If you use the lower-case instructions with `enc()` and `exe()`, then execution of these functions is slow as they involve look-up and string matching with O(n) complexity where "n" is the total number of instructions. The current implementations of `enc()` and `dec()` are optimized for ease-of-use and readability. A faster implementation would collapse multiple look-ups into one look-up, optimize the pattern-matching for the instruction decoding (bits -> instruction), and change the order of the instructions so that more frequently used instructions are at the top of the list. [Here is an older version](https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py) of TinyFive with a faster `dec()` function that collapses two look-ups (`bits -> instruction` and `instruction -> uppeer-case instruction`) and doesn't use `fnmatch`.
+- If you use the lower-case instructions with `asm()` and `exe()`, then execution of these functions is slow as they involve look-up and string matching with O(n) complexity where "n" is the total number of instructions. The current implementations of `asm()` and `dec()` are optimized for ease-of-use and readability. A faster implementation would collapse multiple look-ups into one look-up, optimize the pattern-matching for the instruction decoding (bits -> instruction), and change the order of the instructions so that more frequently used instructions are at the top of the list. [Here is an older version](https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py) of TinyFive with a faster `dec()` function that collapses two look-ups (`bits -> instruction` and `instruction -> uppeer-case instruction`) and doesn't use `fnmatch`.
 
 ## Latest status
 - TinyFive is still under construction, many things haven't been implemented and tested yet.

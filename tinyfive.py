@@ -92,9 +92,9 @@ class tinyfive:
       '1101000_00001_000_1010011': ['R2', 'fcvt.s.wu'],
       '1111000_00000_000_1010011': ['R2', 'fmv.w.x'  ]}
 
-    # generate encoder dictionary by inverting the decoder dictionary
+    # generate asm-dictionary by inverting the decoder dictionary
     # so that key = 'instruction' and value = ['opcode-bits', 'format-type']
-    s.enc_dict = {s.dec_dict[k][1]: [k, s.dec_dict[k][0]] for k in s.dec_dict}
+    s.asm_dict = {s.dec_dict[k][1]: [k, s.dec_dict[k][0]] for k in s.dec_dict}
 
   #-------------------------------------------------------------------------------
   # Part I
@@ -387,7 +387,7 @@ class tinyfive:
     elif inst == 'fmv.w.x'  : s.FMV_W_X  (rd,  rs1)
 
   #-------------------------------------------------------------------------------
-  # encode function (aka assembler, it's the inverse of the dec() function)
+  # assembler function asm() (it's the inverse of the dec() function)
 
   def write_i32(s, x, addr):
     """write 32-bit int to memory (takes 4 byte-addresses)"""
@@ -399,9 +399,16 @@ class tinyfive:
     for i in range(0, 3): ret += s.mem[addr + i] << i*8
     return ret
 
-  def enc(s, inst, arg1, arg2, arg3=0, arg4=0):
+  def calc_branch_imm(s, arg):
+    """calculate the immediate value by subtracting the current PC value from arg
+    TODO: double-check and verify this, especially for AUIPC and JAL"""
+    if isinstance(arg, str):  # look up label if argument is a string
+      arg = s.label_dict[arg]
+    return arg - s.pc
+
+  def asm(s, inst, arg1, arg2, arg3=0, arg4=0):
     """encode instruction and write into mem[]"""
-    [opcode_bits, typ] = s.enc_dict[inst]
+    [opcode_bits, typ] = s.asm_dict[inst]
     f7     = opcode_bits[0:7]
     f2     = opcode_bits[5:7]
     rs2c   = opcode_bits[8:13]  # rs2-code
@@ -413,13 +420,12 @@ class tinyfive:
       arg2, arg3 = arg3, arg2
       typ = 'I'
 
-    # for branch and jump instructions with relative immediates, calculate the
-    # immediate value by subtracting the current PC value from arg3 or arg2, resp.
-    # TODO: double-check and verify this, especially for AUIPC and JAL
+    # for branch and jump instructions with relative immediates, look up label
+    # and calculate the immediate value
     if typ == 'B':
-      arg3 -= s.pc
+      arg3 = s.calc_branch_imm(arg3)
     if inst in ['auipc', 'jal']:
-      arg2 -= s.pc
+      arg2 = s.calc_branch_imm(arg2)
 
     rd    = np.binary_repr(arg1, 5)
     rs1   = np.binary_repr(arg2, 5)
@@ -468,13 +474,9 @@ class tinyfive:
   #-------------------------------------------------------------------------------
   # useful functions for accessing state and memory and assembly-code labels
 
-  def label(s, name):
-    """add new label 'name' to the labels dictionary"""
+  def lbl(s, name):
+    """add new label 'name' to the label dictionary"""
     s.label_dict.update({name: s.pc})
-
-  def labels(s, name):
-    """return address of label 'name' """
-    return s.label_dict[name]
 
   def clear_cpu(s):
     s.x = np.zeros(32, dtype=np.int32)

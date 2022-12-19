@@ -46,7 +46,7 @@ def test_rr(m, inst, rd, rs1, rs2, correctval, val1, val2):
   m.clear_cpu()
   m.x[rs1] = val1
   m.x[rs2] = val2
-  m.enc(inst,  rd, rs1, rs2)
+  m.asm(inst,  rd, rs1, rs2)
   m.exe(start=0, instructions=1)
   return check(inst, m.x[rd], correctval)
 
@@ -54,7 +54,7 @@ def test_imm(m, inst, rd, rs1, correctval, val1, imm):
   """similar to TEST_IMM_OP from arch_test.h of the official test suite"""
   m.clear_cpu()
   m.x[rs1] = val1
-  m.enc(inst, rd, rs1, imm)
+  m.asm(inst, rd, rs1, imm)
   m.exe(start=0, instructions=1)
   return check(inst, m.x[rd], correctval)
 
@@ -110,7 +110,7 @@ def test_fp(m, inst, correctval, val1, val2=0.0, val3=0.0):
   rd = 10
   if inst in ['fmv.w.x', 'fcvt.s.w', 'fcvt.s.wu']:
     m.x[1] = val1
-  m.enc(inst, rd, 1, 2, 3)
+  m.asm(inst, rd, 1, 2, 3)
   m.exe(start=0, instructions=1)
   if inst in ['feq.s', 'fle.s', 'flt.s', 'fcvt.w.s', 'fcvt.wu.s', 'fclass.s']:
     return check(inst, m.x[rd], correctval)
@@ -220,9 +220,9 @@ err += test_fp(m, 'fnmsub.s',     8.0,  2.0,       -5.0,       -2.0)
 def test_flw_fsw(m, tdat, tdat_offset):
   m.clear_cpu()
   m.x[a1] = tdat
-  m.enc('flw.s', f1, tdat_offset, a1)
-  m.enc('fsw.s', f1, 20, a1)
-  m.enc('lw',    a0, 20, a1)
+  m.asm('flw.s', f1, tdat_offset, a1)
+  m.asm('fsw.s', f1, 20, a1)
+  m.asm('lw',    a0, 20, a1)
   m.exe(start=0, instructions=3)
   ref = m.read_i32(tdat+tdat_offset)
   return check('flw/fsw', m.x[a0], ref)
@@ -278,10 +278,10 @@ def test_fsgn(inst, new_sign, rs1_sign, rs2_sign):
   m.clear_cpu()
   m.x[a1] = (rs1_sign << 31) | 0x12345678
   m.x[a2] = -rs2_sign
-  m.enc('fmv.w.x', f1, a1)
-  m.enc('fmv.w.x', f2, a2)
-  m.enc(inst,      f0, f1, f2)
-  m.enc('fmv.x.w', a0, f0)
+  m.asm('fmv.w.x', f1, a1)
+  m.asm('fmv.w.x', f2, a2)
+  m.asm(inst,      f0, f1, f2)
+  m.asm('fmv.x.w', a0, f0)
   m.exe(start=0, instructions=4)
   return check('fmv/fsgnj', m.x[a0], ref)
 
