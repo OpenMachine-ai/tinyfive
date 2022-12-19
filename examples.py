@@ -155,5 +155,8 @@ ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 
+# dump out state
+m.dump_state()
+
 # TODO: a slightly more efficient implementation decrements x[14] so that
 # branch compare against zero, which eliminates the x[14] constant

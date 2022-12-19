@@ -436,8 +436,9 @@ class tinyfive:
 
   def dump_state(s):
     print("pc   : %4d" % s.pc)
-    for i in range(0, 32):
-      print("x[%2d]: %4d" % (i, s.x[i]))
+    for i in range(0, 32, 4):
+      print("x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d" %
+            (i, s.x[i], i+1, s.x[i+1], i+2, s.x[i+2], i+3, s.x[i+3]))
 
 #---------------------------------------------------------------------------------
 # Only needed for Part II: dictionaries for decoder and assembler

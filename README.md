@@ -125,7 +125,7 @@ ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
-**Example 2.3:** Same as example 2.2, but now use `asm()` and `exe()` functions with branch instructions (option C). The `lbl()` function defines labels, which are symbolic names that represent memory addresses. These labels are used for easier readability, especially for branch instructions and to mark the start and end of the assembly code executed by the `exe()` function.
+**Example 2.3:** Same as example 2.2, but now use `asm()` and `exe()` functions with branch instructions (option C). The `lbl()` function defines labels, which are symbolic names that represent memory addresses. These labels improve the readability of branch instructions and mark the start and end of the assembly code executed by the `exe()` function.
 ```python
 # generate 8-element vectors a[] and b[] and store them in memory
 a = np.random.randint(100, size=8)
@@ -157,6 +157,19 @@ res = m.read_i32_vec(8, 4*16)  # read result vector from address 4*16
 ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
+```
+Use `dump_state()` to print out the current value of the program counter (PC) and the register file as follows:
+```python
+>>> m.dump_state()
+pc   :  224
+x[ 0]:    0, x[ 1]:    0, x[ 2]:    0, x[ 3]:    0
+x[ 4]:    0, x[ 5]:    0, x[ 6]:    0, x[ 7]:    0
+x[ 8]:    0, x[ 9]:    0, x[10]:   34, x[11]:   27
+x[12]:    7, x[13]:   32, x[14]:   32, x[15]:    0
+x[16]:    0, x[17]:    0, x[18]:    0, x[19]:    0
+x[20]:    0, x[21]:    0, x[22]:    0, x[23]:    0
+x[24]:    0, x[25]:    0, x[26]:    0, x[27]:    0
+x[28]:    0, x[29]:    0, x[30]:    0, x[31]:    0
 ```
 
 ### Example 3: Multiply two matrices
