@@ -285,7 +285,7 @@ m.clear_cpu()
 A = np.random.randint(100, size=(4,4))
 B = np.random.randint(100, size=(4,4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
-m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*64]
+m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
 # store assembly program starting at address 4*128
 m.pc = 4*128

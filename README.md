@@ -25,9 +25,9 @@ TinyFive is a simple RISC-V emulator, [ISS](https://en.wikipedia.org/wiki/Instru
 
 ## Usage
 TinyFive can be used in the following three ways:
-- **Option A:** Use upper-case instructions such as `ADD()` and `MUL()`, see examples 1.1, 1.2, and 2.1 below.
+- **Option A:** Use upper-case instructions such as `ADD()` and `MUL()`, see examples 1.1, 1.2, 2.1, and 3.1 below.
 - **Option B:** Use `asm()` and `exe()` functions without branch instructions, see examples 1.3 and 2.2 below.
-- **Option C:** Use `asm()` and `exe()` functions with branch instructions, see example 2.3 below.
+- **Option C:** Use `asm()` and `exe()` functions with branch instructions, see example 2.3, 3.2, and 3.3 below.
 
 For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 4KB of memory as follows:
 ```python
@@ -181,12 +181,12 @@ x[28]:    0, x[29]:    0, x[30]:    0, x[31]:    0
 ```
 
 ### Example 3: Multiply two matrices
-We are using the following memory map for multiplying two 4x4 matrices as `res := np.matmul(A, B)`, where each matrix element is 32 bits wide (i.e. each element occupies 4 byte-addresses in memory).
+We are using the following memory map for multiplying two 4x4 matrices as `res := np.matmul(A,B)`, where each matrix element is 32 bits wide (i.e. each element occupies 4 byte-addresses in memory).
 | Byte address | Contents |
 | ------------ | -------- |
 |  0    .. 4\*31 | A-matrix in row-major order: `A[0][0], A[0][1], ... A[3][3]` |
 | 4\*32 .. 4\*63 | B-matrix in row-major order: `B[i][j]` is at address `4*(32+i*4+j)` |
-| 4\*63 .. 4\*95 | result matrix `res[0][0] ... res[3][3]` |
+| 4\*64 .. 4\*95 | result matrix `res[0][0] ... res[3][3]` |
 
 **Example 3.1:** Use upper-case instructions (option A) with Python for-loop.
 ```python
@@ -284,7 +284,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 A = np.random.randint(100, size=(4,4))
 B = np.random.randint(100, size=(4,4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
-m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*64]
+m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
 # store assembly program starting at address 4*128
 m.pc = 4*128
