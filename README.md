@@ -29,10 +29,10 @@ TinyFive can be used in the following three ways:
 - **Option B:** Use `asm()` and `exe()` functions without branch instructions, see examples 1.3 and 2.2 below.
 - **Option C:** Use `asm()` and `exe()` functions with branch instructions, see example 2.3 below.
 
-For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 1KB of memory as follows:
+For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 4KB of memory as follows:
 ```python
 from tinyfive import tinyfive
-m = tinyfive(mem_size=1000)  # instantiate RISC-V machine with 1KB of memory
+m = tinyfive(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
 ```
 
 ### Example 1: Multiply two numbers
@@ -158,8 +158,16 @@ ref = a + b                    # golden reference: simply add a[] + b[]
 print(res - ref)               # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
-Use `dump_state()` to print out the current value of the program counter (PC) and the register file as follows:
+A slightly more efficient implementation would decrement the loop variable `x[13]` (instead of incrementing) so that the branch instruction compares against `x[0] = 0` (instead of the constant stored in `x[14]`), which frees up register `x[14]` and reduces the total number of instructions by 1.
+
+Use `print_perf()` to analyze performance and `dump_state()` to print out the current values of the register files and the the program counter (PC) as follows:
 ```python
+>>> m.print_perf()
+Ops counters: {'total': 50, 'load': 16, 'store': 8, 'mul': 0, 'add': 18, 'branch': 8}
+x[] regfile : 5 out of 31 x-registers are used
+f[] regfile : 0 out of 32 f-registers are used
+Image size  : 32 Bytes
+
 >>> m.dump_state()
 pc   :  224
 x[ 0]:    0, x[ 1]:    0, x[ 2]:    0, x[ 3]:    0
@@ -173,7 +181,148 @@ x[28]:    0, x[29]:    0, x[30]:    0, x[31]:    0
 ```
 
 ### Example 3: Multiply two matrices
-Coming soon
+We are using the following memory map for multiplying two 4x4 matrices as `res := np.matmul(A, B)`, where each matrix element is 32 bits wide (i.e. each element occupies 4 byte-addresses in memory).
+| Byte address | Contents |
+| ------------ | -------- |
+|  0    .. 4\*31 | A-matrix in row-major order: `A[0][0], A[0][1], ... A[3][3]` |
+| 4\*32 .. 4\*63 | B-matrix in row-major order: `B[i][j]` is at address `4*(32+i*4+j)` |
+| 4\*63 .. 4\*95 | result matrix `res[0][0] ... res[3][3]` |
+
+**Example 3.1:** Use upper-case instructions (option A) with Python for-loop.
+```python
+# generate 4x4 matrices A and B and store them in memory
+A = np.random.randint(100, size=(4,4))
+B = np.random.randint(100, size=(4,4))
+m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
+m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+
+# pseudo-assembly for matmul(A,B) using Python for-loops
+for i in range(0, 4):
+  # load x[10] ... x[13] with row i of A
+  for k in range(0, 4):
+    m.LW (10+k, 4*(4*i+k), 0)  # load x[10+k] with A[i][k]
+
+  for j in range(0, 4):
+    # calculate dot product
+    m.LW (18, 4*(32+j), 0)        # load x[18] with B[0][j]
+    m.MUL(19, 10, 18)             # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
+    for k in range(1, 4):
+      m.LW (18, 4*(32+4*k+j), 0)  # load x[18] with B[k][j]
+      m.MUL(18, 10+k, 18)         # x[18] := x[10+k] * x[18] = A[i][k] * B[k][j]
+      m.ADD(19, 19, 18)           # x[19] := x[19] + x[18]
+    m.SW (19, 4*(64+i*4+j), 0)    # store res[i][j] from x[19]
+
+# compare results against golden reference
+res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+ref = np.matmul(A, B)            # golden reference
+print(np.array_equal(res, ref))  # should return 'True'
+# Output: True
+```
+**Example 3.2:** Same as example 3.1, but now use `asm()` and `exe()` functions with branch instructions (option C).
+```python
+# generate 4x4 matrices A and B and store them in memory
+A = np.random.randint(100, size=(4,4))
+B = np.random.randint(100, size=(4,4))
+m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
+m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+
+# store assembly program starting at address 4*128
+m.pc = 4*128
+# here, we decrement the loop variables down to 0 so that we don't need an
+# additional register to hold the constant for detecting the end of the loop
+# x[20] is 4*4*i (i.e. the outer-loop variable) and is decremented by 16 from 64
+# x[21] is 4*j (i.e. the inner-loop variable) and is decremented by 4 from 16
+m.lbl('start')
+m.asm('addi', 20, 0, 64)          # x[20] := 0 + 64
+
+m.lbl('outer-loop')
+m.asm('addi', 20, 20, -16)        # decrement loop-variable: x[20] := x[20] - 16
+m.asm('lw',   10, 0,   20)        # load x[10] with A[i][0] from mem[0 + x[20]]
+m.asm('lw',   11, 4,   20)        # load x[11] with A[i][1] from mem[4 + x[20]]
+m.asm('lw',   12, 2*4, 20)        # load x[12] with A[i][2] from mem[2*4 + x[20]]
+m.asm('lw',   13, 3*4, 20)        # load x[13] with A[i][3] from mem[3*4 + x[20]]
+m.asm('addi', 21, 0, 16)          # reset loop-variable j: x[21] := 0 + 16
+
+m.lbl('inner-loop')
+m.asm('addi', 21, 21, -4)         # decrement j: x[21] := x[21] - 4
+
+m.asm('lw',  18, 4*32, 21)        # load x[18] with B[0][j] from mem[4*32 + x[21]]
+m.asm('mul', 19, 10, 18)          # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
+
+m.asm('lw',  18, 4*(32+4), 21)    # load x[18] with B[1][j]
+m.asm('mul', 18, 11, 18)          # x[18] := x[11] * x[18] = A[i][1] * B[1][j]
+m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
+
+m.asm('lw',  18, 4*(32+2*4), 21)  # load x[18] with B[2][j]
+m.asm('mul', 18, 12, 18)          # x[18] := x[11] * x[18] = A[i][2] * B[2][j]
+m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
+
+m.asm('lw',  18, 4*(32+3*4), 21)  # load x[18] with B[3][j]
+m.asm('mul', 18, 13, 18)          # x[18] := x[11] * x[18] = A[i][3] * B[3][j]
+m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
+
+m.asm('add', 24, 20, 21)          # calculate base address for result-matrix
+m.asm('sw',  19, 4*64, 24)        # store res[i][j] from x[19]
+
+m.asm('bne', 21, 0, 'inner-loop') # branch to 'inner-loop' if x[21] != 0
+m.asm('bne', 20, 0, 'outer-loop') # branch to 'outer-loop' if x[20] != 0
+m.lbl('end')
+
+# execute program from 'start' to 'end'
+m.exe(start='start', end='end')
+m.print_perf()
+
+# compare results against golden reference
+res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+ref = np.matmul(A, B)            # golden reference
+print(np.array_equal(res, ref))  # should return 'True'
+# Output: True
+```
+**Example 3.3:** Same as example 3.2,  but now use Python for-loops in the assembly code to improve readability.
+```python
+# generate 4x4 matrices A and B and store them in memory
+A = np.random.randint(100, size=(4,4))
+B = np.random.randint(100, size=(4,4))
+m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
+m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*64]
+
+# store assembly program starting at address 4*128
+m.pc = 4*128
+# here, we decrement the loop variables down to 0 so that we don't need an
+# additional register to hold the constant for detecting the end of the loop
+# x[20] is 4*4*i (i.e. the outer-loop variable) and is decremented by 16 from 64
+# x[21] is 4*j (i.e. the inner-loop variable) and is decremented by 4 from 16
+m.lbl('start')
+m.asm('addi', 20, 0, 64)            # x[20] := 0 + 64
+m.lbl('outer-loop')
+m.asm('addi', 20, 20, -16)          # decrement loop-variable: x[20] := x[20] - 16
+for k in range(0, 4):
+  m.asm('lw', 10+k, k*4, 20)        # load x[10+k] with A[i][k] from mem[k*4 + x[20]]
+m.asm('addi', 21, 0, 16)            # reset loop-variable j: x[21] := 0 + 16
+m.lbl('inner-loop')
+m.asm('addi', 21, 21, -4)           # decrement j: x[21] := x[21] - 4
+m.asm('lw',   18, 4*32, 21)         # load x[18] with B[0][j] from mem[4*32 + x[21]]
+m.asm('mul',  19, 10, 18)           # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
+for k in range(1, 4):
+  m.asm('lw',  18, 4*(32+k*4), 21)  # load x[18] with B[k][j]
+  m.asm('mul', 18, 10+k, 18)        # x[18] := x[10+k] * x[18] = A[i][k] * B[k][j]
+  m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
+m.asm('add', 24, 20, 21)            # calculate base address for result-matrix
+m.asm('sw',  19, 4*64, 24)          # store res[i][j] from x[19]
+m.asm('bne', 21, 0, 'inner-loop')   # branch to 'inner-loop' if x[21] != 0
+m.asm('bne', 20, 0, 'outer-loop')   # branch to 'outer-loop' if x[20] != 0
+m.lbl('end')
+
+# execute program from 'start' to 'end'
+m.exe(start='start', end='end')
+m.print_perf()
+
+# compare results against golden reference
+res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+ref = np.matmul(A, B)            # golden reference
+print(np.array_equal(res, ref))  # should return 'True'
+# Output: True
+```
 
 ## Running in colab notebook
 You can run TinyFive in [this colab notebook](https://colab.research.google.com/drive/1KXDPwSJmaOGefh5vAjrediwuiRf3wWa2?usp=sharing). This is the quickest way to get started and should work on any machine.
@@ -229,7 +378,9 @@ other free versions are [available here](http://riscvbook.com).
 - [Online simulator](https://ascslab.org/research/briscv/simulator/simulator.html) for debug
 
 ## Tiny Tech promise
-Similar to [tinygrad](https://github.com/geohot/tinygrad), [micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines. Keep in mind that simplicity and size (in terms of number of instructions) is a key feature of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
+Similar to [tinygrad](https://github.com/geohot/tinygrad), [micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines.
+
+Simplicity and size (in terms of number of instructions) is a key feature of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
 the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf).
 
 <p align="center">

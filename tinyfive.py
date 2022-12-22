@@ -18,6 +18,11 @@ class tinyfive:
     s.pc  = 0
     s.label_dict = {}  # label dictionary (for assembly-code labels)
 
+    # performance counters: ops-counters, regfile-usage
+    s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'branch': 0}
+    s.x_usage = np.zeros(32, dtype=np.int8)  # track usage of x registers
+    s.f_usage = np.zeros(32, dtype=np.int8)  # track usage of f registers
+
   #-------------------------------------------------------------------------------
   # Part I
   #-------------------------------------------------------------------------------
@@ -308,6 +313,29 @@ class tinyfive:
     elif inst == 'fcvt.s.wu': s.FCVT_S_WU(rd,  rs1)
     elif inst == 'fmv.w.x'  : s.FMV_W_X  (rd,  rs1)
 
+    # update ops counters
+    s.ops['total'] += 1
+    if inst in ['lb', 'lh', 'lw', 'lbu', 'lhu', 'flw']:
+      s.ops['load'] += 1
+    elif inst in ['sb', 'sh', 'sw', 'fsw']:
+      s.ops['store'] += 1
+    elif inst in ['mul', 'mulh', 'mulhsu', 'mulhu', 'fmul']:
+      s.ops['mul'] += 1
+    elif inst in ['add', 'addi', 'sub', 'fadd', 'fsub']:
+      s.ops['add'] += 1
+    elif inst in ['beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu']:
+      s.ops['branch'] += 1
+
+    # update register-file usage bins based on 'rd' value
+    # exclude instructions that don't have an 'rd' field
+    if inst not in ['beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu', 'sb', 'sh', 'sw', 'fsw.s']:
+      if inst in ['fadd.s', 'fsub.s', 'fmul.s', 'fdiv.s', 'fsqrt.s', 'fmin.s', 'fmax.s',
+                  'fmadd.s', 'fmsub.s', 'fnmadd.s', 'fnmsub.s', 'flw.s', 'fsgnj.s',
+                  'fsgnjn.s', 'fsgnjx.s', 'fcvt.s.w', 'fcvt.s.wu', 'fmv.w.x']:
+        s.f_usage[rd] = 1
+      else:
+        s.x_usage[rd] = 1
+
   #-------------------------------------------------------------------------------
   # assembler function asm() (it's the inverse of the dec() function)
 
@@ -410,6 +438,10 @@ class tinyfive:
   def clear_cpu(s):
     s.x = np.zeros(32, dtype=np.int32)
     s.pc = 0
+    s.label_dict = {}
+    s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'branch': 0}
+    s.x_usage.fill(0)
+    s.f_usage.fill(0)
 
   def clear_mem(s, start=0, end=None):
     """clear memory from address 'start' to 'end' (excluding 'end')"""
@@ -435,10 +467,17 @@ class tinyfive:
       print('%08x' % s.u(s.read_i32(i)))
 
   def dump_state(s):
-    print("pc   : %4d" % s.pc)
+    print('pc   : %4d' % s.pc)
     for i in range(0, 32, 4):
-      print("x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d" %
+      print('x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d, x[%2d]: %4d' %
             (i, s.x[i], i+1, s.x[i+1], i+2, s.x[i+2], i+3, s.x[i+3]))
+
+  def print_perf(s, start='start', end='end'):
+    """print performance numbers, 'start' and 'end' are for printing image size"""
+    print('Ops counters: ' + str(s.ops))
+    print('x[] regfile : ' + str(np.sum(s.x_usage[1:32])) + ' out of 31 x-registers are used')
+    print('f[] regfile : ' + str(np.sum(s.f_usage))       + ' out of 32 f-registers are used')
+    print('Image size  : ' + str(s.look_up_label(end) - s.look_up_label(start)) + ' Bytes')
 
 #---------------------------------------------------------------------------------
 # Only needed for Part II: dictionaries for decoder and assembler
