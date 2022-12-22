@@ -270,7 +270,6 @@ m.lbl('end')
 
 # execute program from 'start' to 'end'
 m.exe(start='start', end='end')
-m.print_perf()
 
 # compare results against golden reference
 res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
@@ -315,13 +314,20 @@ m.lbl('end')
 
 # execute program from 'start' to 'end'
 m.exe(start='start', end='end')
-m.print_perf()
 
 # compare results against golden reference
 res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
+```
+The performance numbers for this example:
+```python
+>>> m.print_perf()
+Ops counters: {'total': 269, 'load': 80, 'store': 16, 'mul': 64, 'add': 89, 'branch': 20}
+x[] regfile : 9 out of 31 x-registers are used
+f[] regfile : 0 out of 32 f-registers are used
+Image size  : 92 Bytes
 ```
 
 ## Running in colab notebook

@@ -181,6 +181,7 @@ m.dump_state()
 
 #-------------------------------------------------------------------------------
 # Example 3.1: use upper-case instructions (option A) with Python for-loop
+print('-------------- Example 3.1: ----------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -214,6 +215,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 
 #-------------------------------------------------------------------------------
 # Example 3.2: same as example 3.1, but now asm() with branch ops (option C)
+print('-------------- Example 3.2: ----------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -278,6 +280,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 #-------------------------------------------------------------------------------
 # Example 3.3: Same as example 3.2, but now use Python for-loops in the assembly
 # code to improve readability
+print('-------------- Example 3.3: ----------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -338,6 +341,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 
 #-------------------------------------------------------------------------------
 # Example 4.1:
+print('-------------- Example 4.1: ----------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -371,6 +375,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 
 #-------------------------------------------------------------------------------
 # Example 4.2:
+print('-------------- Example 4.2: ----------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -455,6 +460,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 #-------------------------------------------------------------------------------
 # Example 4.3: Same as example 4.2, but now use Python for-loops in the assembly
 # code to improve readability
+print('-------------- Example 4.3: ----------------------')
 m.clear_mem()
 m.clear_cpu()
 
