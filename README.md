@@ -321,7 +321,7 @@ ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
 ```
-The performance numbers for example 3.3:
+Performance numbers for example 3.3:
 ```python
 >>> m.print_perf()
 Ops counters: {'total': 269, 'load': 80, 'store': 16, 'mul': 64, 'add': 89, 'branch': 20}
@@ -366,7 +366,11 @@ ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
 ```
-The table below shows a speedup of 1.7. Note that this is a toy example: The bit-widths don't make sense for fixed point (in general, multiplying two 32-bit integers produces a 64-bit product; and adding 4 of these products requires up to 66 bits). And for runtime calculations, we assume that our RISC-V CPU can only perform one instruction per cycle (while many RISC-V cores can perform multiple instructions per cycle).
+The table below shows a speedup of 1.7 with the following caveats:
+- The bit-widths don't make sense for fixed point (in general, multiplying two 32-bit integers produces a 64-bit product; and adding 4 of these products requires up to 66 bits). 
+- For runtime calculations, we assume that our RISC-V CPU can only perform one instruction per cycle (while many RISC-V cores can perform multiple instructions per cycle).
+- For 16x16 or larger matrices, [Strassen's algorithm](https://en.wikipedia.org/wiki/Strassen_algorithm) and [DeepMind's AlphaTensor](https://www.deepmind.com/blog/discovering-novel-algorithms-with-alphatensor) can reduce the total number of multiplications and additions if they are applied recursively.
+
 |             | Image | Registers | Load | Store | Mul | Add | Branch | Total ops | Speedup |
 |:-----------:|:-----:|:---------:|:----:|:-----:|:---:|:---:|:------:|:---------:|:-------:|
 | Example 3.3 | 92B   | 9         | 80   | 16    | 64  | 89  | 20     | 269       | 1       |
