@@ -367,10 +367,10 @@ print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
 ```
 The table below shows a speedup of 1.7. Note that this is a toy example: The bit-widths don't make sense for fixed point (in general, multiplying two 32-bit integers produces a 64-bit product; and adding 4 of these products requires up to 66 bits). And for runtime calculations, we assume that our RISC-V CPU can only perform one instruction per cycle (while many RISC-V cores can perform multiple instructions per cycle).
-| Example | Image | Registers | Load | Store | Mul | Add | Branch | Total ops | Speedup |
-| ------- | ----- | --------- | ---- | ----- | --- | --- | ------ | --------- | ------- |
-| 3.3     | 92B   | 9         | 80   | 16    | 64  | 89  | 20     | 269       | 1       |
-| 3.4     | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
+|             | Image | Registers | Load | Store | Mul | Add | Branch | Total ops | Speedup |
+|:-----------:|:-----:|:---------:|:----:|:-----:|:---:|:---:|:------:|:---------:|:-------:|
+| Example 3.3 | 92B   | 9         | 80   | 16    | 64  | 89  | 20     | 269       | 1       |
+| Example 3.4 | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
 
 ## Running in colab notebook
 You can run TinyFive in [this colab notebook](https://colab.research.google.com/drive/1KXDPwSJmaOGefh5vAjrediwuiRf3wWa2?usp=sharing). This is the quickest way to get started and should work on any machine.
