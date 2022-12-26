@@ -229,9 +229,9 @@ m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 # store assembly program starting at address 4*128
 m.pc = 4*128
 # here, we decrement the loop variables down to 0 so that we don't need an
-# additional register to hold the constant for detecting the end of the loop
-# x[20] is 4*4*i (i.e. the outer-loop variable) and is decremented by 16 from 64
-# x[21] is 4*j (i.e. the inner-loop variable) and is decremented by 4 from 16
+# additional register to hold the constant for detecting the end of the loop:
+#  - x[20] is 4*4*i (i.e. the outer-loop variable) and is decremented by 16 from 64
+#  - x[21] is 4*j (i.e. the inner-loop variable) and is decremented by 4 from 16
 m.lbl('start')
 m.asm('addi', 20, 0, 64)          # x[20] := 0 + 64
 
@@ -288,9 +288,9 @@ m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 # store assembly program starting at address 4*128
 m.pc = 4*128
 # here, we decrement the loop variables down to 0 so that we don't need an
-# additional register to hold the constant for detecting the end of the loop
-# x[20] is 4*4*i (i.e. the outer-loop variable) and is decremented by 16 from 64
-# x[21] is 4*j (i.e. the inner-loop variable) and is decremented by 4 from 16
+# additional register to hold the constant for detecting the end of the loop:
+#  - x[20] is 4*4*i (i.e. the outer-loop variable) and is decremented by 16 from 64
+#  - x[21] is 4*j (i.e. the inner-loop variable) and is decremented by 4 from 16
 m.lbl('start')
 m.asm('addi', 20, 0, 64)            # x[20] := 0 + 64
 m.lbl('outer-loop')
@@ -321,7 +321,7 @@ ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
 ```
-The performance numbers for this example:
+The performance numbers for example 3.3:
 ```python
 >>> m.print_perf()
 Ops counters: {'total': 269, 'load': 80, 'store': 16, 'mul': 64, 'add': 89, 'branch': 20}
@@ -329,6 +329,48 @@ x[] regfile : 9 out of 31 x-registers are used
 f[] regfile : 0 out of 32 f-registers are used
 Image size  : 92 Bytes
 ```
+**Example 3.4:** 4x4 matrix multiplication optimized for runtime at the expense of image size and register file usage. Specifically, we first store the entire B matrix in the register file. And we fully unroll the for-loops to eliminate loop variables and branch instructions at the expense of a larger image size.
+```python
+# generate 4x4 matrices A and B and store them in memory
+A = np.random.randint(100, size=(4,4))
+B = np.random.randint(100, size=(4,4))
+m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
+m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+
+# store assembly program starting at address 4*128
+m.pc = 4*128
+m.lbl('start')
+# first, load the entire B matrix into reg-file x[16] ... x[31]
+for i in range(0, 4):
+  for j in range(0, 4):
+    m.asm('lw', 16+4*i+j, 4*(32+4*i+j), 0)
+# perform matmul in row-major order
+for i in range(0, 4):
+  # load x[10] ... x[13] with row i of A
+  for k in range(0, 4):
+    m.asm('lw', 10+k, 4*(4*i+k), 0)     # load x[10+k] with A[i][k]
+  for j in range(0, 4):
+    m.asm('mul', 15, 10, 16+j)          # x[15] := x[10] * x[16+j] = A[i][0] * B[0][j]
+    for k in range(1, 4):
+      m.asm('mul', 14, 10+k, 16+4*k+j)  # x[14] := x[10+k] * x[16+4k+j] = A[i][k] * B[k][j]
+      m.asm('add', 15, 15, 14)          # x[15] := x[15] + x[14]
+    m.asm('sw', 15, 4*(64+i*4+j), 0)    # store res[i][j] from x[15]
+m.lbl('end')
+
+# execute program from 'start' to 'end'
+m.exe(start='start', end='end')
+
+# compare results against golden reference
+res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+ref = np.matmul(A, B)            # golden reference
+print(np.array_equal(res, ref))  # should return 'True'
+# Output: True
+```
+The table below shows a speedup of 1.7. Note that this is a toy example: The bit-widths don't make sense for fixed point (in general, multiplying two 32-bit integers produces a 64-bit product; and adding 4 of these products requires up to 66 bits). And for runtime calculations, we assume that our RISC-V CPU can only perform one instruction per cycle (while many RISC-V cores can perform multiple instructions per cycle).
+| Example | Image | Registers | Load | Store | Mul | Add | Branch | Total ops | Speedup |
+| ------- | ----- | --------- | ---- | ----- | --- | --- | ------ | --------- | ------- |
+| 3.3     | 92B   | 9         | 80   | 16    | 64  | 89  | 20     | 269       | 1       |
+| 3.4     | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
 
 ## Running in colab notebook
 You can run TinyFive in [this colab notebook](https://colab.research.google.com/drive/1KXDPwSJmaOGefh5vAjrediwuiRf3wWa2?usp=sharing). This is the quickest way to get started and should work on any machine.
