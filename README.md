@@ -1,7 +1,7 @@
 # TinyFive
 
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
-<a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive//blob/main/colab.ipynb">
+<a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
 </a>
     
@@ -380,9 +380,9 @@ The table below shows a speedup of 1.7 with the following caveats:
 | Example 3.4 | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
 
 ## Running in colab notebook
-<a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive//blob/main/colab.ipynb">
+<a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
-</a> This is the quickest way to get started and should work on any machine.
+</a>  This is the quickest way to get started and should work on any machine.
 
 ## Running on your machine
 Clone the repo and install packages `numpy` and `fnmatch` as follows:
