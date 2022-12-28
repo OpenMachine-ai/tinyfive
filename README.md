@@ -1,6 +1,6 @@
 # TinyFive
 
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=visitors+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=views+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
 </a>
@@ -13,7 +13,7 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
 - [Fewer than 1000 lines](tinyfive.py) of code (w/o tests and examples)
 - Uses NumPy for math
 
-## Table of content
+## Contents
 - [Usage](#usage)
   - [Example 1: Multiply two numbers](#example-1-multiply-two-numbers)
   - [Example 2: Add two vectors](#example-2-add-two-vectors)
