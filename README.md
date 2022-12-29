@@ -1,10 +1,8 @@
 # TinyFive
 
+<a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/colab.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20"> </a>
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=views+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
-<a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/colab.ipynb">
-  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
-</a>
-    
+
 TinyFive is a lightweight RISC-V emulator and assembler written entirely in Python:
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
@@ -429,13 +427,13 @@ The table below compares TinyFive with other [ISS](https://en.wikipedia.org/wiki
 ## References
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf) for a brief description of most instructions. See also the [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
-- Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman (2 of the 4 founders of RISC-V). Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
+- Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman. Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
 other free versions are [available here](http://riscvbook.com).
 - Pydgin [paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) and [video](https://youtu.be/-p_AGki7Vsk)
 - [Online simulator](https://ascslab.org/research/briscv/simulator/simulator.html) for debug
 
 ## Tiny Tech promise
-Similar to [tinygrad](https://github.com/geohot/tinygrad), [micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines.
+Similar to [tinygrad](https://github.com/geohot/tinygrad), [micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of LOC). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines.
 
 Simplicity and size (in terms of number of instructions) is a key feature of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
 the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf).
