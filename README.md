@@ -418,6 +418,7 @@ The table below compares TinyFive with other [ISS](https://en.wikipedia.org/wiki
 | [Pydgin](https://github.com/cornell-brg/pydgin)                    | Cornell University   | Python, C | Last update 2016 | A, D, F, I, M | |
 | [Spike](https://github.com/riscv-software-src/riscv-isa-sim)       | UC Berkeley          | C, C++    | Yes              | All           | |
 | [QEMU](https://www.qemu.org/) | [Fabrice Bellard](https://en.wikipedia.org/wiki/Fabrice_Bellard) | C  | Yes              | All           | |
+| [TinyEMU](https://bellard.org/tinyemu/) | [Fabrice Bellard](https://en.wikipedia.org/wiki/Fabrice_Bellard) | C  | Yes    | All           | |
 | [riscvOVPsim](https://github.com/riscv-ovpsim/imperas-riscv-tests) | Imperas              | C         | Yes              | All           | |
 | [Whisper](https://github.com/chipsalliance/SweRV-ISS)              | Western Digital      | C, C++    | Yes | Almost all                 | |
 | [Sail Model](https://github.com/riscv/sail-riscv)                  | Cambridge, Edinburgh | Sail, C   | Yes | All                        | |
