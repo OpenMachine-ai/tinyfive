@@ -1,5 +1,7 @@
-from tinyfive import tinyfive
 import numpy as np
+from machine import machine
+# uncomment below to use the tinyfive PyPi package instead of ./machine.py
+# from tinyfive.machine import machine
 
 # Four examples:
 #   - Example 1: multiply two numbers
@@ -18,7 +20,7 @@ import numpy as np
 #-------------------------------------------------------------------------------
 # Example 1: multiply two numbers
 #-------------------------------------------------------------------------------
-m = tinyfive(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
+m = machine(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
 
 #-------------------------------------------------------------------------------
 # Example 1.1: use option A with back-door loading of registers

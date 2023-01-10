@@ -32,8 +32,8 @@ TinyFive can be used in the following three ways:
 
 For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 4KB of memory as follows:
 ```python
-from tinyfive import tinyfive
-m = tinyfive(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
+from machine import machine
+m = machine(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
 ```
 
 ### Example 1: Multiply two numbers

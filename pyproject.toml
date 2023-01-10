@@ -1,5 +1,7 @@
 # this file is for creating the PyPi package. See
 # https://packaging.python.org/en/latest/tutorials/packaging-projects/
+# TODO: I'm actually not sure if it requires Python 3.6, it might also
+# work with older Python. And also with numpy older than 1.20
 
 [build-system]
 requires = ["hatchling"]
@@ -7,7 +9,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tinyfive"
-version = "0.0.6"
+version = "0.0.9"
 authors = [
   { name="Open Machine", email="tinyfive@openmachine.ai" },
 ]

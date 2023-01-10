@@ -9,7 +9,7 @@ import fnmatch
 # Part I is sufficient for emulating RISC-V. Part II is only needed if you want
 # to emulate the instruction encoding of RISC-V.
 
-class tinyfive:
+class machine:
   def __init__(s, mem_size):  # for brevity we use 's' instead of 'self'
     """create state of CPU: memory, register file 'x[]', program counter 'pc'"""
     s.mem = np.zeros(mem_size, dtype=np.uint8)  # memory 'mem[]' is unsigned int8

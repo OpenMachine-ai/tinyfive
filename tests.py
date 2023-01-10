@@ -1,5 +1,7 @@
-from tinyfive import *
 import numpy as np
+from machine import *
+# uncomment below to use the tinyfive PyPi package instead of ./machine.py
+# from tinyfive.machine import *
 
 # this file performs the following tests:
 #   1) floating point tests from the official RISC-V unit tests
@@ -29,7 +31,7 @@ import numpy as np
 #     // Copyright (c) 2020. RISC-V International. All rights reserved.
 #     // SPDX-License-Identifier: BSD-3-Clause
 
-m = tinyfive(mem_size=1000)  # instantiate RISC-V machine with 1KB of memory
+m = machine(mem_size=1000)  # instantiate RISC-V machine with 1KB of memory
 
 #-------------------------------------------------------------------------------
 # functions for (1) and (2)
