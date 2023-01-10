@@ -1,0 +1,25 @@
+# this file is for creating the PyPi package. See
+# https://packaging.python.org/en/latest/tutorials/packaging-projects/
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tinyfive"
+version = "0.0.3"
+authors = [
+  { name="Open Machine", email="tinyfive@openmachine.ai" },
+]
+description = "TinyFive is a lightweight RISC-V emulator and assembler written entirely in Python"
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/OpenMachine-ai/tinyfive"
+"Bug Tracker" = "https://github.com/OpenMachine-ai/tinyfive/issues"
