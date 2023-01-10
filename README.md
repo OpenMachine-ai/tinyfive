@@ -383,11 +383,11 @@ The table below shows a speedup of 1.7 with the following caveats:
 </a>  This is the quickest way to get started and should work on any machine.
 
 ## Running on your machine
-Clone the repo and install packages `numpy` and `fnmatch` as follows:
+Clone the repo and install package `numpy` as follows:
 ```bash
 git clone https://github.com/OpenMachine-ai/tinyfive.git
 cd tinyfive
-pip3 install numpy fnmatch
+pip3 install numpy
 ```
 To run the examples, type:
 ```bash

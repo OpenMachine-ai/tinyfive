@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tinyfive"
-version = "0.0.4"
+version = "0.0.6"
 authors = [
   { name="Open Machine", email="tinyfive@openmachine.ai" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
 ]
 dependencies = [
   "numpy>1.20.0",
-  "fnmatch",
 ]
 
 [project.urls]

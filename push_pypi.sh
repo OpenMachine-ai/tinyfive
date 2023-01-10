@@ -7,12 +7,12 @@
 # copy all relevant files into folder pypi
 rm -rf pypi
 mkdir pypi
-mkdir -p pypi/tinyfive
+mkdir -p pypi/src/tinyfive pypi/tests
 cp LICENSE pyproject.toml README.md pypi
-cp tinyfive.py                      pypi/tinyfive
-touch                               pypi/tinyfive/__init__.py
+cp tinyfive.py                      pypi/src/tinyfive
+touch                               pypi/src/tinyfive/__init__.py
 
 # build and upload
 cd pypi
 python3 -m build
-python3 -m twine upload dist/* --verbose
+python3 -m twine upload dist/*
