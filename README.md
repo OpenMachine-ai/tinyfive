@@ -18,8 +18,8 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
   - [Example 1: Multiply two numbers](#example-1-multiply-two-numbers)
   - [Example 2: Add two vectors](#example-2-add-two-vectors)
   - [Example 3: Multiply two matrices](#example-3-multiply-two-matrices)
-- [Running in colab notebook](#running-in-colab-notebook)
-- [Running on your machine](#running-on-your-machine)
+- [Running in colab](#running-in-colab)
+- [Running without package](#running-without-package)
 - [Speed](#speed)
 - [Latest status](#latest-status)
 - [Comparison](#comparison)
@@ -27,7 +27,6 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
 - [Tiny Tech promise](#tiny-tech-promise)
 
 ## Installation
-Install the tinyfive package as follows:
 ```
 pip install tinyfive
 ```
@@ -385,17 +384,27 @@ The table below shows a speedup of 1.7 with the following caveats:
 | Example 3.3 | 92B   | 9         | 80   | 16    | 64  | 89  | 20     | 269       | 1       |
 | Example 3.4 | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
 
-## Running in colab notebook
+## Running in colab
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
-</a>  This is the quickest way to get started and should work on any machine.
+</a>  This is the quickest way to get started and should work on any machine. If you have a free Google Drive account, you can make a copy of this colab via the menu `File` -> `Save a copy in Drive`. Now you can edit the code. 
 
-## Running on your machine
-Clone the repo and install package `numpy` as follows:
-```bash
+Alternatively, start a new colab in your Google Drive as follows: [Go here](https://drive.google.com/drive/my-drive) and click on `New` -> `More` -> `Google Colaboratory`. Then copy below lines into your colab:
+
+```python
+!pip install tinyfive
+from tinyfive.machine import machine
+import numpy as np
+
+m = machine(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
+```
+
+## Running without package
+If you don't want to use the TinyFive python package, then you can clone the latest repo and install numpy as follows:
+```python
 git clone https://github.com/OpenMachine-ai/tinyfive.git
 cd tinyfive
-pip3 install numpy
+pip install numpy
 ```
 To run the examples, type:
 ```bash
@@ -404,6 +413,18 @@ python3 examples.py
 To run the test suite, type:
 ```bash
 python3 tests.py
+```
+
+If you don't want to run above steps on your local machine, you can run it in a colab as follows: Start a new colab in your Google Drive by [going here](https://drive.google.com/drive/my-drive) and clicking on `New` -> `More` -> `Google Colaboratory`. Then copy below lines into your colab:
+```bash
+!git clone https://github.com/OpenMachine-ai/tinyfive.git
+%cd tinyfive
+
+# run examples
+!python3 examples.py
+
+# run test suite
+!python3 tests.py
 ```
 
 ## Speed
