@@ -7,10 +7,10 @@
 # copy all relevant files into folder pypi
 rm -rf pypi
 mkdir pypi
-mkdir -p pypi/src/tinyfive
-cp LICENSE pyproject.toml README.md pypi
-cp machine.py                       pypi/src/tinyfive
-touch                               pypi/src/tinyfive/__init__.py
+mkdir -p pypi/tinyfive
+cp ../LICENSE ../README.md pyproject.toml pypi
+cp ../machine.py                          pypi/tinyfive
+touch                                     pypi/tinyfive/__init__.py
 
 # build and upload
 cd pypi
