@@ -7,8 +7,8 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
 - It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
 - TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
 - If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
-- Can be very fast if you only use the upper-case instructions defined in the [first ~200 lines of tinyfive.py](tinyfive.py#L1-L200).
-- [Fewer than 1000 lines](tinyfive.py) of code (w/o tests and examples)
+- Can be very fast if you only use the upper-case instructions defined in the [first ~200 lines of machine.py](machine.py#L1-L200).
+- [Fewer than 1000 lines](machine.py) of code (w/o tests and examples)
 - Uses NumPy for math
 
 ## Contents
