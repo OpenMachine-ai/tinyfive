@@ -32,7 +32,8 @@ TinyFive can be used in the following three ways:
 
 For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 4KB of memory as follows:
 ```python
-from machine import machine
+!pip install tinyfive
+from tinyfive.machine import machine
 m = machine(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
 ```
 
