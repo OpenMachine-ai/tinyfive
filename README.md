@@ -387,7 +387,9 @@ The table below shows a speedup of 1.7 with the following caveats:
 ## Running in colab
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
-</a>  This is the quickest way to get started and should work on any machine. If you have a free Google Drive account, you can make a copy of this colab via the menu `File` -> `Save a copy in Drive`. Now you can edit the code. 
+</a>  This is the quickest way to get started and should work on any machine. 
+
+If you have a free Google Drive account, you can make a copy of this colab via the menu `File` -> `Save a copy in Drive`. Now you can edit the code.
 
 Alternatively, start a new colab in your Google Drive as follows: [Go here](https://drive.google.com/drive/my-drive) and click on `New` -> `More` -> `Google Colaboratory`. Then copy below lines into your colab:
 
@@ -401,7 +403,7 @@ m = machine(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
 
 ## Running without package
 If you don't want to use the TinyFive python package, then you can clone the latest repo and install numpy as follows:
-```python
+```bash
 git clone https://github.com/OpenMachine-ai/tinyfive.git
 cd tinyfive
 pip install numpy
@@ -416,7 +418,7 @@ python3 tests.py
 ```
 
 If you don't want to run above steps on your local machine, you can run it in a colab as follows: Start a new colab in your Google Drive by [going here](https://drive.google.com/drive/my-drive) and clicking on `New` -> `More` -> `Google Colaboratory`. Then copy below lines into your colab:
-```bash
+```python
 !git clone https://github.com/OpenMachine-ai/tinyfive.git
 %cd tinyfive
 
