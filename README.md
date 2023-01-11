@@ -13,6 +13,7 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
 - Uses NumPy for math
 
 ## Contents
+- [Installation](#installation)
 - [Usage](#usage)
   - [Example 1: Multiply two numbers](#example-1-multiply-two-numbers)
   - [Example 2: Add two vectors](#example-2-add-two-vectors)
@@ -25,15 +26,20 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
 - [References](#references)
 - [Tiny Tech promise](#tiny-tech-promise)
 
+## Installation
+Install the tinyfive package as follows:
+```
+pip install tinyfive
+```
+
 ## Usage
 TinyFive can be used in the following three ways:
 - **Option A:** Use upper-case instructions such as `ADD()` and `MUL()`, see examples 1.1, 1.2, 2.1, and 3.1 below.
 - **Option B:** Use `asm()` and `exe()` functions without branch instructions, see examples 1.3 and 2.2 below.
 - **Option C:** Use `asm()` and `exe()` functions with branch instructions, see example 2.3, 3.2, and 3.3 below.
 
-For all examples below, we assume that you import the TinyFive module and instantiate a RISC-V machine with at least 4KB of memory as follows:
+For the examples below, import and instantiate a RISC-V machine with at least 4KB of memory as follows:
 ```python
-!pip install tinyfive
 from tinyfive.machine import machine
 m = machine(mem_size=4000)  # instantiate RISC-V machine with 4KB of memory
 ```
@@ -444,3 +450,7 @@ the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.p
 <p align="center">
   <img src="https://github.com/OpenMachine-ai/tinyfive/blob/main/misc/logo.jpg">
 </p>
+
+
+New view counter, will eventually use this one:
+[![Visits Badge](https://badges.strrl.dev/visits/OpenMachine-ai/tinyfive)](https://badges.strrl.dev)
