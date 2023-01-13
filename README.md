@@ -473,7 +473,3 @@ the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.p
 <p align="center">
   <img src="https://github.com/OpenMachine-ai/tinyfive/blob/main/misc/logo.jpg">
 </p>
-
-
-New view counter, will eventually use this one:
-[![Visits Badge](https://badges.strrl.dev/visits/OpenMachine-ai/tinyfive)](https://badges.strrl.dev)
