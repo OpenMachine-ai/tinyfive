@@ -96,7 +96,7 @@ m.write_i32_vec(a, 0)    # write vector a[] to mem[0]
 m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 
 # pseudo-assembly for adding vectors a[] and b[] using Python for-loop
-for i in range(0, 8):
+for i in range(8):
   m.LW (11, 4*i,      0)   # load x[11] with a[i] from mem[4*i + 0]
   m.LW (12, 4*(i+8),  0)   # load x[12] with b[i] from mem[4*(i+8) + 0]
   m.ADD(10, 11,       12)  # x[10] := x[11] + x[12]
@@ -118,7 +118,7 @@ m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 
 # store assembly program in mem[] starting at address 4*48
 m.pc = 4*48
-for i in range(0, 8):
+for i in range(8):
   m.asm('lw',  11, 4*i,      0)   # load x[11] with a[i] from mem[4*i + 0]
   m.asm('lw',  12, 4*(i+8),  0)   # load x[12] with b[i] from mem[4*(i+8) + 0]
   m.asm('add', 10, 11,       12)  # x[10] := x[11] + x[12]
@@ -171,7 +171,7 @@ A slightly more efficient implementation would decrement the loop variable `x[13
 Use `print_perf()` to analyze performance and `dump_state()` to print out the current values of the register files and the the program counter (PC) as follows:
 ```python
 >>> m.print_perf()
-Ops counters: {'total': 50, 'load': 16, 'store': 8, 'mul': 0, 'add': 18, 'branch': 8}
+Ops counters: {'total': 50, 'load': 16, 'store': 8, 'mul': 0, 'add': 18, 'madd': 0, 'branch': 8}
 x[] regfile : 5 out of 31 x-registers are used
 f[] regfile : 0 out of 32 f-registers are used
 Image size  : 32 Bytes
@@ -205,12 +205,12 @@ m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
 # pseudo-assembly for matmul(A,B) using Python for-loops
-for i in range(0, 4):
+for i in range(4):
   # load x[10] ... x[13] with row i of A
-  for k in range(0, 4):
+  for k in range(4):
     m.LW (10+k, 4*(4*i+k), 0)  # load x[10+k] with A[i][k]
 
-  for j in range(0, 4):
+  for j in range(4):
     # calculate dot product
     m.LW (18, 4*(32+j), 0)        # load x[18] with B[0][j]
     m.MUL(19, 10, 18)             # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
@@ -303,7 +303,7 @@ m.lbl('start')
 m.asm('addi', 20, 0, 64)            # x[20] := 0 + 64
 m.lbl('outer-loop')
 m.asm('addi', 20, 20, -16)          # decrement loop-variable: x[20] := x[20] - 16
-for k in range(0, 4):
+for k in range(4):
   m.asm('lw', 10+k, k*4, 20)        # load x[10+k] with A[i][k] from mem[k*4 + x[20]]
 m.asm('addi', 21, 0, 16)            # reset loop-variable j: x[21] := 0 + 16
 m.lbl('inner-loop')
@@ -332,7 +332,7 @@ print(np.array_equal(res, ref))  # should return 'True'
 Performance numbers for example 3.3:
 ```python
 >>> m.print_perf()
-Ops counters: {'total': 269, 'load': 80, 'store': 16, 'mul': 64, 'add': 89, 'branch': 20}
+Ops counters: {'total': 269, 'load': 80, 'store': 16, 'mul': 64, 'add': 89, 'madd': 0, 'branch': 20}
 x[] regfile : 9 out of 31 x-registers are used
 f[] regfile : 0 out of 32 f-registers are used
 Image size  : 92 Bytes
@@ -348,16 +348,15 @@ m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 # store assembly program starting at address 4*128
 m.pc = 4*128
 m.lbl('start')
-# first, load the entire B matrix into reg-file x[16] ... x[31]
-for i in range(0, 4):
-  for j in range(0, 4):
+# load entire B matrix into registers x[16] ... x[31]
+for i in range(4):
+  for j in range(4):
     m.asm('lw', 16+4*i+j, 4*(32+4*i+j), 0)
 # perform matmul in row-major order
-for i in range(0, 4):
-  # load x[10] ... x[13] with row i of A
-  for k in range(0, 4):
+for i in range(4):
+  for k in range(4):                    # load x[10] ... x[13] with row i of A
     m.asm('lw', 10+k, 4*(4*i+k), 0)     # load x[10+k] with A[i][k]
-  for j in range(0, 4):
+  for j in range(4):
     m.asm('mul', 15, 10, 16+j)          # x[15] := x[10] * x[16+j] = A[i][0] * B[0][j]
     for k in range(1, 4):
       m.asm('mul', 14, 10+k, 16+4*k+j)  # x[14] := x[10+k] * x[16+4k+j] = A[i][k] * B[k][j]
@@ -387,7 +386,7 @@ The table below shows a speedup of 1.7 with the following caveats:
 ## Running in colab
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20">
-</a>  This is the quickest way to get started and should work on any machine. 
+</a>  This is the quickest way to get started and should work on any machine.
 
 If you have a free Google Drive account, you can make a copy of this colab via the menu `File` -> `Save a copy in Drive`. Now you can edit the code.
 

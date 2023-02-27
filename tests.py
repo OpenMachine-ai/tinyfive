@@ -313,7 +313,7 @@ print('FP-tests errors: ' + str(err))
 # the tests below are derived from the *.s files at rv32i_m/I/src of the
 # official test-suite. Specifically, the first 10 or so tests are used
 # TODO: use all tests. Note that we are currently only testing the ALU
-# instructions here because the other tests are harder to adoot, this is a TODO
+# instructions here because the other tests are harder to adopt, this is a TODO
 
 # add
 err = 0

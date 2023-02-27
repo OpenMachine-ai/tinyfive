@@ -19,7 +19,7 @@ class machine:
     s.label_dict = {}  # label dictionary (for assembly-code labels)
 
     # performance counters: ops-counters, regfile-usage
-    s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'branch': 0}
+    s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'madd': 0, 'branch': 0}
     s.x_usage = np.zeros(32, dtype=np.int8)  # track usage of x registers
     s.f_usage = np.zeros(32, dtype=np.int8)  # track usage of f registers
 
@@ -124,10 +124,6 @@ class machine:
 
   #-------------------------------------------------------------------------------
   # F-extension (RV32F)
-
-  def f2b(s,x): return (s.f[x]).view(np.uint32)       # float-to-bits
-  def b2f(s,x): return np.uint32(x).view(np.float32)  # bits-to-float
-
   def FADD_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] + s.f[rs2];     s.ipc()
   def FSUB_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] - s.f[rs2];     s.ipc()
   def FMUL_S (s,rd,rs1,rs2): s.f[rd] = s.f[rs1] * s.f[rs2];     s.ipc()
@@ -145,6 +141,8 @@ class machine:
   def FLT_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] <  s.f[rs2]); s.ipc()
   def FLE_S(s,rd,rs1,rs2): s.x[rd] = int(s.f[rs1] <= s.f[rs2]); s.ipc()
 
+  def f2b(s,x): return (s.f[x]).view(np.uint32)       # float-to-bits
+  def b2f(s,x): return np.uint32(x).view(np.float32)  # bits-to-float
   def FLW_S(s,rd,imm,rs1): s.f[rd] = s.b2f((s.mem[s.x[rs1] + imm+3] << 24) + \
                                            (s.mem[s.x[rs1] + imm+2] << 16) + \
                                            (s.mem[s.x[rs1] + imm+1] << 8)  + \
@@ -315,14 +313,16 @@ class machine:
 
     # update ops counters
     s.ops['total'] += 1
-    if inst in ['lb', 'lh', 'lw', 'lbu', 'lhu', 'flw']:
+    if inst in ['lb', 'lh', 'lw', 'lbu', 'lhu', 'flw.s']:
       s.ops['load'] += 1
-    elif inst in ['sb', 'sh', 'sw', 'fsw']:
+    elif inst in ['sb', 'sh', 'sw', 'fsw.s']:
       s.ops['store'] += 1
-    elif inst in ['mul', 'mulh', 'mulhsu', 'mulhu', 'fmul']:
+    elif inst in ['mul', 'mulh', 'mulhsu', 'mulhu', 'fmul.s']:
       s.ops['mul'] += 1
-    elif inst in ['add', 'addi', 'sub', 'fadd', 'fsub']:
+    elif inst in ['add', 'addi', 'sub', 'fadd.s', 'fsub.s']:
       s.ops['add'] += 1
+    elif inst in ['fmadd.s', 'fmsub.s', 'fnmadd.s', 'fnmsub.s']:
+      s.ops['madd'] += 1
     elif inst in ['beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu']:
       s.ops['branch'] += 1
 
@@ -341,12 +341,12 @@ class machine:
 
   def write_i32(s, x, addr):
     """write 32-bit int to memory (takes 4 byte-addresses)"""
-    for i in range(0, 4): s.mem[addr + i] = (x >> (8*i)) & 0xff
+    for i in range(4): s.mem[addr + i] = (x >> (8*i)) & 0xff
 
   def read_i32(s, addr):
     """"read 32-bit int from memory"""
     ret = s.i8(s.mem[addr + 3]) << 3*8
-    for i in range(0, 3): ret += s.mem[addr + i] << i*8
+    for i in range(3): ret += s.mem[addr + i] << i*8
     return ret
 
   def lbl(s, name):
@@ -416,7 +416,7 @@ class machine:
     stop when pc reaches 'end' address"""
     s.pc = s.look_up_label(start)
     if end is None:  # this is for the case where argument 'instructions' is used
-      for i in range(0, instructions):
+      for i in range(instructions):
         inst = s.read_i32(s.pc)  # fetch instruction from memory
         s.dec(np.binary_repr(s.u(inst), 32))
     else:  # this is for the case where argument 'end' is used
@@ -439,7 +439,7 @@ class machine:
     s.x = np.zeros(32, dtype=np.int32)
     s.pc = 0
     s.label_dict = {}
-    s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'branch': 0}
+    s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'madd': 0, 'branch': 0}
     s.x_usage.fill(0)
     s.f_usage.fill(0)
 
@@ -451,13 +451,13 @@ class machine:
 
   def write_i32_vec(s, vec, start):
     """write i32-vector to memory address 'start'"""
-    for i in range(0, np.size(vec)):
+    for i in range(np.size(vec)):
       s.write_i32(vec[i], start + 4*i)
 
   def read_i32_vec(s, size, start):
     """read i32-vector of size 'size' from memory address 'start'"""
     ret = np.empty(size, dtype=np.int32)
-    for i in range(0, size):
+    for i in range(size):
       ret[i] = s.read_i32(start + 4*i)
     return ret
 

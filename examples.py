@@ -81,7 +81,7 @@ m.write_i32_vec(a, 0)    # write vector a[] to mem[0]
 m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 
 # pseudo-assembly for adding vectors a[] and b[] using Python for-loop
-for i in range(0, 8):
+for i in range(8):
   m.LW (11, 4*i,      0)   # load x[11] with a[i] from mem[4*i + 0]
   m.LW (12, 4*(i+8),  0)   # load x[12] with b[i] from mem[4*(i+8) + 0]
   m.ADD(10, 11,       12)  # x[10] := x[11] + x[12]
@@ -107,7 +107,7 @@ m.write_i32_vec(b, 4*8)  # write vector b[] to mem[4*8]
 
 # store assembly program in mem[] starting at address 4*48
 m.pc = 4*48
-for i in range(0, 8):
+for i in range(8):
   m.asm('lw',  11, 4*i,      0)   # load x[11] with a[i] from mem[4*i + 0]
   m.asm('lw',  12, 4*(i+8),  0)   # load x[12] with b[i] from mem[4*(i+8) + 0]
   m.asm('add', 10, 11,       12)  # x[10] := x[11] + x[12]
@@ -188,18 +188,18 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
-# pseudo-assembly for matmul(A,B) using Python for-loops
-for i in range(0, 4):
+# pseudo-assembly for matmul(A, B) using Python for-loops
+for i in range(4):
   # load x[10] ... x[13] with row i of A
-  for k in range(0, 4):
+  for k in range(4):
     m.LW (10+k, 4*(4*i+k), 0)  # load x[10+k] with A[i][k]
 
-  for j in range(0, 4):
+  for j in range(4):
     # calculate dot product
     m.LW (18, 4*(32+j), 0)        # load x[18] with B[0][j]
     m.MUL(19, 10, 18)             # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
@@ -210,7 +210,7 @@ for i in range(0, 4):
     m.SW (19, 4*(64+i*4+j), 0)    # store res[i][j] from x[19]
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*64).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -222,8 +222,8 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
@@ -274,7 +274,7 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*64).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -287,8 +287,8 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
@@ -302,7 +302,7 @@ m.lbl('start')
 m.asm('addi', 20, 0, 64)            # x[20] := 0 + 64
 m.lbl('outer-loop')
 m.asm('addi', 20, 20, -16)          # decrement loop-variable: x[20] := x[20] - 16
-for k in range(0, 4):
+for k in range(4):
   m.asm('lw', 10+k, k*4, 20)        # load x[10+k] with A[i][k] from mem[k*4 + x[20]]
 m.asm('addi', 21, 0, 16)            # reset loop-variable j: x[21] := 0 + 16
 m.lbl('inner-loop')
@@ -324,7 +324,7 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*64).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -338,24 +338,23 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
 
 # store assembly program starting at address 4*128
 m.pc = 4*128
 m.lbl('start')
-# first, load the entire B matrix into reg-file x[16] ... x[31]
-for i in range(0, 4):
-  for j in range(0, 4):
+# load entire B matrix into registers x[16] ... x[31]
+for i in range(4):
+  for j in range(4):
     m.asm('lw', 16+4*i+j, 4*(32+4*i+j), 0)
 # perform matmul in row-major order
-for i in range(0, 4):
-  # load x[10] ... x[13] with row i of A
-  for k in range(0, 4):
+for i in range(4):
+  for k in range(4):                    # load x[10] ... x[13] with row i of A
     m.asm('lw', 10+k, 4*(4*i+k), 0)     # load x[10+k] with A[i][k]
-  for j in range(0, 4):
+  for j in range(4):
     m.asm('mul', 15, 10, 16+j)          # x[15] := x[10] * x[16+j] = A[i][0] * B[0][j]
     for k in range(1, 4):
       m.asm('mul', 14, 10+k, 16+4*k+j)  # x[14] := x[10+k] * x[16+4k+j] = A[i][k] * B[k][j]
@@ -368,7 +367,7 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*64).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -392,18 +391,18 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 8x8 matrices A and B and store them in memory
-A = np.random.randint(100, size=(8,8))
-B = np.random.randint(100, size=(8,8))
+A = np.random.randint(100, size=(8, 8))
+B = np.random.randint(100, size=(8, 8))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*64)  # write matrix B to mem[4*64]
 
 # pseudo-assembly for matmul(A,B) using Python for-loops
-for i in range(0, 8):
+for i in range(8):
   # load x[10] ... x[17] with row i of A
-  for k in range(0, 8):
+  for k in range(8):
     m.LW (10+k, 4*(8*i+k), 0)  # load x[10+k] with A[i][k]
 
-  for j in range(0, 8):
+  for j in range(8):
     # calculate dot product
     m.LW (18, 4*(64+j), 0)        # load x[18] with B[0][j]
     m.MUL(19, 10, 18)             # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
@@ -414,7 +413,7 @@ for i in range(0, 8):
     m.SW (19, 4*(128+i*8+j), 0)   # store res[i][j] from x[19]
 
 # compare results against golden reference
-res = m.read_i32_vec(8*8, 4*128).reshape(8,8)  # read result matrix
+res = m.read_i32_vec(8*8, 4*128).reshape(8, 8)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -426,8 +425,8 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 8x8 matrices A and B and store them in memory
-A = np.random.randint(100, size=(8,8))
-B = np.random.randint(100, size=(8,8))
+A = np.random.randint(100, size=(8, 8))
+B = np.random.randint(100, size=(8, 8))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*64)  # write matrix B to mem[4*64]
 
@@ -498,7 +497,7 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against golden reference
-res = m.read_i32_vec(8*8, 4*128).reshape(8,8)  # read result matrix
+res = m.read_i32_vec(8*8, 4*128).reshape(8, 8)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -511,8 +510,8 @@ m.clear_mem()
 m.clear_cpu()
 
 # generate 8x8 matrices A and B and store them in memory
-A = np.random.randint(100, size=(8,8))
-B = np.random.randint(100, size=(8,8))
+A = np.random.randint(100, size=(8, 8))
+B = np.random.randint(100, size=(8, 8))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
 m.write_i32_vec(B.flatten(), 4*64)  # write matrix B to mem[4*64]
 
@@ -526,7 +525,7 @@ m.lbl('start')
 m.asm('addi', 20, 0, 256)           # x[20] := 0 + 256
 m.lbl('outer-loop')
 m.asm('addi', 20, 20, -32)          # decrement loop-variable: x[20] := x[20] - 32
-for k in range(0, 8):
+for k in range(8):
   m.asm('lw', 10+k, k*4, 20)        # load x[10+k] with A[i][k] from mem[k*4 + x[20]]
 m.asm('addi', 21, 0, 32)            # reset loop-variable j: x[21] := 0 + 32
 m.lbl('inner-loop')
@@ -548,7 +547,7 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against golden reference
-res = m.read_i32_vec(8*8, 4*128).reshape(8,8)  # read result matrix
+res = m.read_i32_vec(8*8, 4*128).reshape(8, 8)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
