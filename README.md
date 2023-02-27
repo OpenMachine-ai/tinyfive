@@ -189,39 +189,39 @@ x[28]:    0, x[29]:    0, x[30]:    0, x[31]:    0
 ```
 
 ### Example 3: Multiply two matrices
-We are using the following memory map for multiplying two 4x4 matrices as `res := np.matmul(A,B)`, where each matrix element is 32 bits wide (i.e. each element occupies 4 byte-addresses in memory).
+We are using the following memory map for multiplying two 4x4 matrices as `res := np.matmul(A, B)`, where each matrix element is 32 bits wide (i.e. each element occupies 4 byte-addresses in memory).
 | Byte address | Contents |
 | ------------ | -------- |
-|  0    .. 4\*31 | A-matrix in row-major order: `A[0][0], A[0][1], ... A[3][3]` |
-| 4\*32 .. 4\*63 | B-matrix in row-major order: `B[i][j]` is at address `4*(32+i*4+j)` |
-| 4\*64 .. 4\*95 | result matrix `res[0][0] ... res[3][3]` |
+|  0    .. 4\*15 | A-matrix in row-major order: `A[0, 0], A[0, 1], ... A[3, 3]` |
+| 4\*16 .. 4\*31 | B-matrix in row-major order: `B[i, j]` is at address `4*(16+i*4+j)` |
+| 4\*32 .. 4\*47 | result matrix `res[0, 0] ... res[3, 3]` |
 
 **Example 3.1:** Use upper-case instructions (option A) with Python for-loop.
 ```python
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
-m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+m.write_i32_vec(B.flatten(), 4*16)  # write matrix B to mem[4*16]
 
-# pseudo-assembly for matmul(A,B) using Python for-loops
+# pseudo-assembly for matmul(A, B) using Python for-loops
 for i in range(4):
   # load x[10] ... x[13] with row i of A
   for k in range(4):
-    m.LW (10+k, 4*(4*i+k), 0)  # load x[10+k] with A[i][k]
+    m.LW (10+k, 4*(4*i+k), 0)  # load x[10+k] with A[i, k]
 
   for j in range(4):
     # calculate dot product
-    m.LW (18, 4*(32+j), 0)        # load x[18] with B[0][j]
-    m.MUL(19, 10, 18)             # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
+    m.LW (18, 4*(16+j), 0)        # load x[18] with B[0, j]
+    m.MUL(19, 10, 18)             # x[19] := x[10] * x[18] = A[i, 0] * B[0, j]
     for k in range(1, 4):
-      m.LW (18, 4*(32+4*k+j), 0)  # load x[18] with B[k][j]
-      m.MUL(18, 10+k, 18)         # x[18] := x[10+k] * x[18] = A[i][k] * B[k][j]
+      m.LW (18, 4*(16+4*k+j), 0)  # load x[18] with B[k, j]
+      m.MUL(18, 10+k, 18)         # x[18] := x[10+k] * x[18] = A[i, k] * B[k, j]
       m.ADD(19, 19, 18)           # x[19] := x[19] + x[18]
-    m.SW (19, 4*(64+i*4+j), 0)    # store res[i][j] from x[19]
+    m.SW (19, 4*(32+i*4+j), 0)    # store res[i, j] from x[19]
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -229,10 +229,10 @@ print(np.array_equal(res, ref))  # should return 'True'
 **Example 3.2:** Same as example 3.1, but now use `asm()` and `exe()` functions with branch instructions (option C).
 ```python
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
-m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+m.write_i32_vec(B.flatten(), 4*16)  # write matrix B to mem[4*16]
 
 # store assembly program starting at address 4*128
 m.pc = 4*128
@@ -245,32 +245,32 @@ m.asm('addi', 20, 0, 64)          # x[20] := 0 + 64
 
 m.lbl('outer-loop')
 m.asm('addi', 20, 20, -16)        # decrement loop-variable: x[20] := x[20] - 16
-m.asm('lw',   10, 0,   20)        # load x[10] with A[i][0] from mem[0 + x[20]]
-m.asm('lw',   11, 4,   20)        # load x[11] with A[i][1] from mem[4 + x[20]]
-m.asm('lw',   12, 2*4, 20)        # load x[12] with A[i][2] from mem[2*4 + x[20]]
-m.asm('lw',   13, 3*4, 20)        # load x[13] with A[i][3] from mem[3*4 + x[20]]
+m.asm('lw',   10, 0,   20)        # load x[10] with A[i, 0] from mem[0 + x[20]]
+m.asm('lw',   11, 4,   20)        # load x[11] with A[i, 1] from mem[4 + x[20]]
+m.asm('lw',   12, 2*4, 20)        # load x[12] with A[i, 2] from mem[2*4 + x[20]]
+m.asm('lw',   13, 3*4, 20)        # load x[13] with A[i, 3] from mem[3*4 + x[20]]
 m.asm('addi', 21, 0, 16)          # reset loop-variable j: x[21] := 0 + 16
 
 m.lbl('inner-loop')
 m.asm('addi', 21, 21, -4)         # decrement j: x[21] := x[21] - 4
 
-m.asm('lw',  18, 4*32, 21)        # load x[18] with B[0][j] from mem[4*32 + x[21]]
-m.asm('mul', 19, 10, 18)          # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
+m.asm('lw',  18, 4*16, 21)        # load x[18] with B[0, j] from mem[4*16 + x[21]]
+m.asm('mul', 19, 10, 18)          # x[19] := x[10] * x[18] = A[i, 0] * B[0, j]
 
-m.asm('lw',  18, 4*(32+4), 21)    # load x[18] with B[1][j]
-m.asm('mul', 18, 11, 18)          # x[18] := x[11] * x[18] = A[i][1] * B[1][j]
+m.asm('lw',  18, 4*(16+4), 21)    # load x[18] with B[1, j]
+m.asm('mul', 18, 11, 18)          # x[18] := x[11] * x[18] = A[i, 1] * B[1, j]
 m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
 
-m.asm('lw',  18, 4*(32+2*4), 21)  # load x[18] with B[2][j]
-m.asm('mul', 18, 12, 18)          # x[18] := x[11] * x[18] = A[i][2] * B[2][j]
+m.asm('lw',  18, 4*(16+2*4), 21)  # load x[18] with B[2, j]
+m.asm('mul', 18, 12, 18)          # x[18] := x[11] * x[18] = A[i, 2] * B[2, j]
 m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
 
-m.asm('lw',  18, 4*(32+3*4), 21)  # load x[18] with B[3][j]
-m.asm('mul', 18, 13, 18)          # x[18] := x[11] * x[18] = A[i][3] * B[3][j]
+m.asm('lw',  18, 4*(16+3*4), 21)  # load x[18] with B[3, j]
+m.asm('mul', 18, 13, 18)          # x[18] := x[11] * x[18] = A[i, 3] * B[3, j]
 m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
 
 m.asm('add', 24, 20, 21)          # calculate base address for result-matrix
-m.asm('sw',  19, 4*64, 24)        # store res[i][j] from x[19]
+m.asm('sw',  19, 4*32, 24)        # store res[i, j] from x[19]
 
 m.asm('bne', 21, 0, 'inner-loop') # branch to 'inner-loop' if x[21] != 0
 m.asm('bne', 20, 0, 'outer-loop') # branch to 'outer-loop' if x[20] != 0
@@ -280,7 +280,7 @@ m.lbl('end')
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -288,10 +288,10 @@ print(np.array_equal(res, ref))  # should return 'True'
 **Example 3.3:** Same as example 3.2,  but now use Python for-loops in the assembly code to improve readability.
 ```python
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
-m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+m.write_i32_vec(B.flatten(), 4*16)  # write matrix B to mem[4*16]
 
 # store assembly program starting at address 4*128
 m.pc = 4*128
@@ -304,18 +304,18 @@ m.asm('addi', 20, 0, 64)            # x[20] := 0 + 64
 m.lbl('outer-loop')
 m.asm('addi', 20, 20, -16)          # decrement loop-variable: x[20] := x[20] - 16
 for k in range(4):
-  m.asm('lw', 10+k, k*4, 20)        # load x[10+k] with A[i][k] from mem[k*4 + x[20]]
+  m.asm('lw', 10+k, k*4, 20)        # load x[10+k] with A[i, k] from mem[k*4 + x[20]]
 m.asm('addi', 21, 0, 16)            # reset loop-variable j: x[21] := 0 + 16
 m.lbl('inner-loop')
 m.asm('addi', 21, 21, -4)           # decrement j: x[21] := x[21] - 4
-m.asm('lw',   18, 4*32, 21)         # load x[18] with B[0][j] from mem[4*32 + x[21]]
-m.asm('mul',  19, 10, 18)           # x[19] := x[10] * x[18] = A[i][0] * B[0][j]
+m.asm('lw',   18, 4*16, 21)         # load x[18] with B[0, j] from mem[4*16 + x[21]]
+m.asm('mul',  19, 10, 18)           # x[19] := x[10] * x[18] = A[i, 0] * B[0, j]
 for k in range(1, 4):
-  m.asm('lw',  18, 4*(32+k*4), 21)  # load x[18] with B[k][j]
-  m.asm('mul', 18, 10+k, 18)        # x[18] := x[10+k] * x[18] = A[i][k] * B[k][j]
+  m.asm('lw',  18, 4*(16+k*4), 21)  # load x[18] with B[k, j]
+  m.asm('mul', 18, 10+k, 18)        # x[18] := x[10+k] * x[18] = A[i, k] * B[k, j]
   m.asm('add', 19, 19, 18)          # x[19] := x[19] + x[18]
 m.asm('add', 24, 20, 21)            # calculate base address for result-matrix
-m.asm('sw',  19, 4*64, 24)          # store res[i][j] from x[19]
+m.asm('sw',  19, 4*32, 24)          # store res[i, j] from x[19]
 m.asm('bne', 21, 0, 'inner-loop')   # branch to 'inner-loop' if x[21] != 0
 m.asm('bne', 20, 0, 'outer-loop')   # branch to 'outer-loop' if x[20] != 0
 m.lbl('end')
@@ -324,7 +324,7 @@ m.lbl('end')
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -340,10 +340,10 @@ Image size  : 92 Bytes
 **Example 3.4:** 4x4 matrix multiplication optimized for runtime at the expense of image size and register file usage. Specifically, we first store the entire B matrix in the register file. And we fully unroll the for-loops to eliminate loop variables and branch instructions at the expense of a larger image size.
 ```python
 # generate 4x4 matrices A and B and store them in memory
-A = np.random.randint(100, size=(4,4))
-B = np.random.randint(100, size=(4,4))
+A = np.random.randint(100, size=(4, 4))
+B = np.random.randint(100, size=(4, 4))
 m.write_i32_vec(A.flatten(), 0)     # write matrix A to mem[0]
-m.write_i32_vec(B.flatten(), 4*32)  # write matrix B to mem[4*32]
+m.write_i32_vec(B.flatten(), 4*16)  # write matrix B to mem[4*16]
 
 # store assembly program starting at address 4*128
 m.pc = 4*128
@@ -351,24 +351,24 @@ m.lbl('start')
 # load entire B matrix into registers x[16] ... x[31]
 for i in range(4):
   for j in range(4):
-    m.asm('lw', 16+4*i+j, 4*(32+4*i+j), 0)
+    m.asm('lw', 16+4*i+j, 4*(16+4*i+j), 0)
 # perform matmul in row-major order
 for i in range(4):
   for k in range(4):                    # load x[10] ... x[13] with row i of A
-    m.asm('lw', 10+k, 4*(4*i+k), 0)     # load x[10+k] with A[i][k]
+    m.asm('lw', 10+k, 4*(4*i+k), 0)     # load x[10+k] with A[i, k]
   for j in range(4):
-    m.asm('mul', 15, 10, 16+j)          # x[15] := x[10] * x[16+j] = A[i][0] * B[0][j]
+    m.asm('mul', 15, 10, 16+j)          # x[15] := x[10] * x[16+j] = A[i, 0] * B[0, j]
     for k in range(1, 4):
-      m.asm('mul', 14, 10+k, 16+4*k+j)  # x[14] := x[10+k] * x[16+4k+j] = A[i][k] * B[k][j]
+      m.asm('mul', 14, 10+k, 16+4*k+j)  # x[14] := x[10+k] * x[16+4k+j] = A[i, k] * B[k, j]
       m.asm('add', 15, 15, 14)          # x[15] := x[15] + x[14]
-    m.asm('sw', 15, 4*(64+i*4+j), 0)    # store res[i][j] from x[15]
+    m.asm('sw', 15, 4*(32+i*4+j), 0)    # store res[i, j] from x[15]
 m.lbl('end')
 
 # execute program from 'start' to 'end'
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*64).reshape(4,4)  # read result matrix
+res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True

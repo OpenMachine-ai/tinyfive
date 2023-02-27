@@ -179,7 +179,7 @@ class machine:
 
   # TODOs:
   #   - add rounding mode (rm) argument. Only rm = 0 is implemented right now.
-  #     See experimental/rounding_modes.py for more details.
+  #     See misc/experimental_rounding.py for more details.
   #   - add floating point CSR register
 
   #-------------------------------------------------------------------------------
