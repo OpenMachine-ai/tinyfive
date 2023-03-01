@@ -471,7 +471,7 @@ class machine:
     for i in range(np.size(vec)):
       s.write_i32(vec[i], start + 4*i)
 
-  def read_i32_vec(s, size, start):
+  def read_i32_vec(s, start, size):
     """read i32-vector of size 'size' from memory address 'start'"""
     ret = np.empty(size, dtype=np.int32)
     for i in range(size):
@@ -494,7 +494,7 @@ class machine:
     for i in range(np.size(vec)):
       s.write_f32(vec[i], start + 4*i)
 
-  def read_f32_vec(s, size, start):
+  def read_f32_vec(s, start, size):
     """read i32-vector of size 'size' from memory address 'start'"""
     ret = np.empty(size, dtype=np.float32)
     for i in range(size):

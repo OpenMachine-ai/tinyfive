@@ -6,7 +6,7 @@ from machine import machine
 #   from tinyfive.machine import machine
 
 np.random.seed(5)  # fix seed for reproducible results
-m = machine(mem_size=5000000)  # instantiate RISC-V machine with 5MB of memory
+m = machine(mem_size=2000000)  # instantiate RISC-V machine with 2MB of memory
 # TODO: reduce to 500KB once we use branches to reduce image size
 
 #-------------------------------------------------------------------------------
@@ -44,19 +44,19 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against np.matmul(A, B)
-res = m.read_f32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
+res = m.read_f32_vec(4*32, size=4*4).reshape(4, 4)  # read result matrix
 m.print_rel_err(res, np.matmul(A, B))
 # Output: should be very small, e.g. smaller than 1e-06, but could be larger
 
 #-------------------------------------------------------------------------------
-# Example 2: 1x1 Conv2D with 128 input and 128 output channels, 36x36 image
+# Example 2: 1x1 Conv2D with 128 input and 128 output channels, 12x12 image
 #-------------------------------------------------------------------------------
 print('-------------- Example 2: ------------------------')
 m.clear_mem()
 m.clear_cpu()
 
-# generate matrices A (36, 128) and W (128, 128) and store them in memory
-A = np.random.normal(size=(36, 128)).astype(np.float32)
+# generate matrices A (12, 128) and W (128, 128) and store them in memory
+A = np.random.normal(size=(12, 128)).astype(np.float32)
 W = np.random.normal(size=(128, 128)).astype(np.float32)
 W_start    = A.size * 4
 Y_start    = W_start + W.size * 4
@@ -65,17 +65,17 @@ m.write_f32_vec(A.flatten(), 0)        # write A to mem[0]
 m.write_f32_vec(W.flatten(), W_start)  # write W to mem[W_start]
 
 # proof of concept: split W and A into 4x4 submatrices, then compute matmul(A, W)
-A_split = np.empty((9, 32, 4, 4))
+A_split = np.empty((3, 32, 4, 4))
 W_split = np.empty((32, 32, 4, 4))
 for i in range(32):
   for j in range(32):
     W_split[i, j] = W[i*4:i*4+4, j*4:j*4+4]
-for i in range(9):
+for i in range(3):
   for j in range(32):
     A_split[i, j] = A[i*4:i*4+4, j*4:j*4+4]
 # compute the big matmul by smaller 4x4 matmuls
-Y = np.zeros((36, 128))
-for i in range(9):
+Y = np.zeros((12, 128))
+for i in range(3):
   for j in range(32):
     for k in range(32):
       Y[4*i:4*i+4, 4*j:4*j+4] += np.matmul(A_split[i, k], W_split[k, j])
@@ -99,8 +99,8 @@ m.print_rel_err(Y, np.matmul(A, W))  # compare Y against matmul(A, W)
 m.pc = code_start
 m.lbl('start')
 
-# matmul (36,128) x (128,128) -> (36,128)
-for i in range(9):
+# matmul (12,128) x (128,128) -> (12,128)
+for i in range(3):
   m.asm('lui',  9,      m.hi20(4*128*4*i))  # m.x[9] = 4*128*4*i
   m.asm('addi', 9, 9,   m.lo12(4*128*4*i))
   m.asm('lui',  12,     m.hi20(Y_start + 4*128*4*i))  # m.x[12] = Y_start + ..
@@ -151,6 +151,6 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against expected
-res = m.read_f32_vec(36*128, Y_start).reshape(36, 128)  # read result matrix
+res = m.read_f32_vec(Y_start, size=12*128).reshape(12, 128)  # read result matrix
 m.print_rel_err(res, np.matmul(A, W))
 # m.print_rel_err(res, Y)

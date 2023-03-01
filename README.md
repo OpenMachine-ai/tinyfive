@@ -103,9 +103,9 @@ for i in range(8):
   m.SW (10, 4*(i+16), 0)   # store results in mem[], starting at address 4*16
 
 # compare results against golden reference
-res = m.read_i32_vec(8, 4*16)  # read result vector from address 4*16
-ref = a + b                    # golden reference: simply add a[] + b[]
-print(res - ref)               # print difference (should be all-zero)
+res = m.read_i32_vec(4*16, size=8)  # read result vector from address 4*16
+ref = a + b                         # golden reference: simply add a[] + b[]
+print(res - ref)                    # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
 **Example 2.2**: Same as example 2.1, but now use `asm()` and `exe()` functions without branch instructions (option B).
@@ -128,9 +128,9 @@ for i in range(8):
 m.exe(start=4*48, instructions=8*4)
 
 # compare results against golden reference
-res = m.read_i32_vec(8, 4*16)  # read result vector from address 4*16
-ref = a + b                    # golden reference: simply add a[] + b[]
-print(res - ref)               # print difference (should be all-zero)
+res = m.read_i32_vec(4*16, size=8)  # read result vector from address 4*16
+ref = a + b                         # golden reference: simply add a[] + b[]
+print(res - ref)                    # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
 **Example 2.3:** Same as example 2.2, but now use `asm()` and `exe()` functions with branch instructions (option C). The `lbl()` function defines labels, which are symbolic names that represent memory addresses. These labels improve the readability of branch instructions and mark the start and end of the assembly code executed by the `exe()` function.
@@ -161,9 +161,9 @@ m.lbl('end')                   # label 'end'
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(8, 4*16)  # read result vector from address 4*16
-ref = a + b                    # golden reference: simply add a[] + b[]
-print(res - ref)               # print difference (should be all-zero)
+res = m.read_i32_vec(4*16, size=8)  # read result vector from address 4*16
+ref = a + b                         # golden reference: simply add a[] + b[]
+print(res - ref)                    # print difference (should be all-zero)
 # Output: [0 0 0 0 0 0 0 0]
 ```
 A slightly more efficient implementation would decrement the loop variable `x[13]` (instead of incrementing) so that the branch instruction compares against `x[0] = 0` (instead of the constant stored in `x[14]`), which frees up register `x[14]` and reduces the total number of instructions by 1.
@@ -221,7 +221,7 @@ for i in range(4):
     m.SW (19, 4*(32+i*4+j), 0)    # store res[i, j] from x[19]
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
+res = m.read_i32_vec(4*32, size=4*4).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -280,7 +280,7 @@ m.lbl('end')
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
+res = m.read_i32_vec(4*32, size=4*4).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -324,7 +324,7 @@ m.lbl('end')
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
+res = m.read_i32_vec(4*32, size=4*4).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
@@ -368,7 +368,7 @@ m.lbl('end')
 m.exe(start='start', end='end')
 
 # compare results against golden reference
-res = m.read_i32_vec(4*4, 4*32).reshape(4, 4)  # read result matrix
+res = m.read_i32_vec(4*32, size=4*4).reshape(4, 4)  # read result matrix
 ref = np.matmul(A, B)            # golden reference
 print(np.array_equal(res, ref))  # should return 'True'
 # Output: True
