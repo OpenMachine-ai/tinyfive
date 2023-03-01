@@ -13,9 +13,9 @@ class machine:
   def __init__(s, mem_size):  # for brevity we use 's' instead of 'self'
     """create state of CPU: memory, register file 'x[]', program counter 'pc'"""
     s.mem = np.zeros(mem_size, dtype=np.uint8)  # memory 'mem[]' is unsigned int8
-    s.x   = np.zeros(32, dtype=np.int32)        # reg file 'x[]' is signed int32
-    s.f   = np.zeros(32, dtype=np.float32)      # reg file 'f[]' for F-extension
-    s.pc  = 0
+    s.x   = np.zeros(32, dtype=np.int32)        # regfile 'x[]' is signed int32
+    s.f   = np.zeros(32, dtype=np.float32)      # regfile 'f[]' for F-extension
+    s.pc  = np.zeros(1, dtype=np.uint32)        # program counter (PC) is uint32
     s.label_dict = {}  # label dictionary (for assembly-code labels)
 
     # performance counters: ops-counters, regfile-usage
@@ -426,9 +426,20 @@ class machine:
 
   #-------------------------------------------------------------------------------
   # pseudoinstructions
+
+  def hi20(s, val): return (val + 0x800) >> 12  # higher 20 bits (+1 if val[11]==1)
+  def lo12(s, val): return val & 0xfff          # lower 12 bits
+  # above functions are copied from LLVM
+  # https://github.com/llvm/llvm-project/blob/main/lld/ELF/Arch/RISCV.cpp
+  # note that ADDI interprets the immediate as a 12-bit signed. So if bit[11] is
+  # set (i.e. value -2048 = -0x800), then we have to add +1 to the upper 20 bits
+  # (i.e. +0x1000) so that (hi20 >> 12) + lo12 is the same as 'val'. The term
+  # '(val + 0x800) >> 12' in hi20 def will only add +1 if bit val[11] is set.
+
   def LI(s, rd, imm):
-    LUI (s, rd, imm >> 12)
-    ADDI(s, rd, rd, imm & 0xfff)
+    LUI (s, rd,     hi20(imm))
+    ADDI(s, rd, rd, lo12(imm))
+  # TODO: add a corresponding lower-case instruction
 
   # TODO: add more pseudoinstructions
 
@@ -437,11 +448,14 @@ class machine:
 
   def clear_cpu(s):
     s.x = np.zeros(32, dtype=np.int32)
+    s.f = np.zeros(32, dtype=np.float32)
     s.pc = 0
     s.label_dict = {}
     s.ops = {'total': 0, 'load': 0, 'store': 0, 'mul': 0, 'add': 0, 'madd': 0, 'branch': 0}
     s.x_usage.fill(0)
     s.f_usage.fill(0)
+    # TODO: add an option that initializes all registers with 'np.empty' or
+    # random data so we can find bugs that are hidden by register initialization
 
   def clear_mem(s, start=0, end=None):
     """clear memory from address 'start' to 'end' (excluding 'end')"""
@@ -449,6 +463,9 @@ class machine:
       end = np.size(s.mem)  # use maximum memory address by default
     for i in range(start, end): s.mem[i] = 0
 
+  # TODO: replace write_* and read_* defs by generic 'write_mem' and 'read_mem'
+  # that work for any tensor.  For read, have a size-parameter that can be set
+  # to e.g. (4, 4) for a 4x4 matrix
   def write_i32_vec(s, vec, start):
     """write i32-vector to memory address 'start'"""
     for i in range(np.size(vec)):
@@ -459,6 +476,29 @@ class machine:
     ret = np.empty(size, dtype=np.int32)
     for i in range(size):
       ret[i] = s.read_i32(start + 4*i)
+    return ret
+
+  def write_f32(s, f, addr):
+    """write 32-bit float to memory (takes 4 byte-addresses)"""
+    x = f.view(np.uint32)
+    for i in range(4): s.mem[addr + i] = (x >> (8*i)) & 0xff
+
+  def read_f32(s, addr):
+    """"read 32-bit float from memory"""
+    ret = s.i8(s.mem[addr + 3]) << 3*8
+    for i in range(3): ret += s.mem[addr + i] << i*8
+    return s.b2f(ret)
+
+  def write_f32_vec(s, vec, start):
+    """write i32-vector to memory address 'start'"""
+    for i in range(np.size(vec)):
+      s.write_f32(vec[i], start + 4*i)
+
+  def read_f32_vec(s, size, start):
+    """read i32-vector of size 'size' from memory address 'start'"""
+    ret = np.empty(size, dtype=np.float32)
+    for i in range(size):
+      ret[i] = s.read_f32(start + 4*i)
     return ret
 
   def mem_dump(s, start, size):
@@ -478,6 +518,13 @@ class machine:
     print('x[] regfile : ' + str(np.sum(s.x_usage[1:32])) + ' out of 31 x-registers are used')
     print('f[] regfile : ' + str(np.sum(s.f_usage))       + ' out of 32 f-registers are used')
     print('Image size  : ' + str(s.look_up_label(end) - s.look_up_label(start)) + ' Bytes')
+
+  def print_rel_err(s, X, X_ref):
+    """print maximum relative error of matrix X relative to X_ref"""
+    max_err = np.max(np.abs((X - X_ref) / X_ref))
+    print('maximum relative error = ' + str(max_err))
+    # TODO: can we force numpy, torch, tf to not use any optimizations for matmul,
+    # so that each inner-product is calculated in the same order as a dot-product?
 
 #---------------------------------------------------------------------------------
 # Only needed for Part II: dictionaries for decoder and assembler
