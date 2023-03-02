@@ -435,6 +435,7 @@ class machine:
   # set (i.e. value -2048 = -0x800), then we have to add +1 to the upper 20 bits
   # (i.e. +0x1000) so that (hi20 >> 12) + lo12 is the same as 'val'. The term
   # '(val + 0x800) >> 12' in hi20 def will only add +1 if bit val[11] is set.
+  # Example: 0xdeadbeef -> hi20 = 0xdeadc; lo12 = -273
 
   def LI(s, rd, imm):
     LUI (s, rd,     hi20(imm))
