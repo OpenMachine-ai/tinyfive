@@ -246,7 +246,7 @@ for chan in range(4):
     for j in range(3):
       m.FLW_S(3*i+j, (3*i + j)*4, 11)  # f[i, j] = W[i, j, chan]
 
-  # comupte all outputs (6x6) for channel 'chan'
+  # compute all outputs (6x6) for channel 'chan'
   for row in range(6):
     for col in range(6):
       # load 3 activations, perform 9 muls, and store 1 output
@@ -277,14 +277,21 @@ for chan in range(4):
   m.ADDI(10, 10, 6*6*4)  # for A(chan)
   m.ADDI(12, 12, 6*6*4)  # for Y(chan)
 
+  # TODOs:
+  #  - parameterize above and eventually move into a def
+  #  - add example for stride=2
+  #  - reduce number of loads by computing several outputs in parallel (each output
+  #    requires three registers for stride=1, so here we could compute 6 outputs in
+  #    parallel; and when image-size is 6x6, process an entire column in parallel)
+
 # compare results against expected Y
 Yasm = np.transpose(m.read_f32_vec(Ystart, size=6*6*4).reshape(4, 6, 6), axes=[1, 2, 0])
 m.print_rel_err(Yasm, Y)  # compare Yasm against Y
 
 #-------------------------------------------------------------------------------
-# Example 4: Conv2D 3x3, 3 in-channels, 8 out-channels, stride=1, 12x12 image
+# Example 4: Conv2D 3x3, 3 in-channels, 8 out-channels, 12x12 image, stride=1
 #-------------------------------------------------------------------------------
-print('-------------- Example 4: Conv2D 3x3 layer ----------------------------')
+print('-------------- Example 4: Conv2D 3x3 layer, stride=1 ------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -336,7 +343,7 @@ for chan in range(C): # 'chan' refers to 'output-channel'
       for k in range(3):  # 'k' is input-channel
         m.FLW_S(9*i+3*j+k, (9*i+3*j+k)*4, 11)  # f[i, j, k] = W[i, j, k, chan]
 
-  # comupte all outputs (6x6) for channel 'chan'
+  # compute all outputs (6x6) for channel 'chan'
   for row in range(I):
     for col in range(I):
       # load 3*3 activations, perform 27 muls, and store 1 output
@@ -373,4 +380,108 @@ for chan in range(C): # 'chan' refers to 'output-channel'
 
 # compare results against expected Y
 Yasm = np.transpose(m.read_f32_vec(Ystart, size=I*I*8).reshape(8, I, I), axes=[1, 2, 0])
+m.print_rel_err(Yasm, Y)
+
+#-------------------------------------------------------------------------------
+# Example 5: Conv2D 3x3, 3 in-channels, 8 out-channels, 12x12 image, stride=2
+#-------------------------------------------------------------------------------
+# same as example 4, but now with stride=2
+
+print('-------------- Example 5: Conv2D 3x3 layer, stride=2 ------------------')
+m.clear_mem()
+m.clear_cpu()
+
+#-------------------------------------------------------------------------------
+# generate activations and weights, run inference
+A = np.random.normal(size=(1, 12, 12, 3)).astype(np.float32)
+W = np.random.normal(size=(3, 3, 3, 8)).astype(np.float32)
+# input shape:  (1, 12, 12, 3) : batch-size, 12x12 image, channels
+# output shape: (1, 6, 6, 8) : batch-size, 6x6 image, channels
+# kernel shape: (3, 3, 3, 8) : 3x3 kernel, in-channels, out-channels
+
+# define layer and run inference
+layer = Conv2D(8, 3, input_shape=(12, 12, 3), padding='same', strides=2,
+               kernel_initializer=kr.initializers.constant(W))
+Yk = layer(A)
+Y = Yk.numpy().reshape(6, 6, 8)
+
+# Keras does the striding as follows: the first valid output equals the
+# [1, 1] output of the non-strided version, etc.
+
+#-------------------------------------------------------------------------------
+# assembly code (with uppercase instructions)
+
+# register map:
+#   x[10] : base address for A[chan]
+#   x[11] : base address for W[chan]
+#   x[12] : base address for Y[chan]
+#   f[0] .. f[26]: the 27 weights (3, 3, 3) for one output channel
+#   f[27] : holds the latest activation loaded from memory
+#   f[28] : accumulation register 'out0' for current output
+#   f[29] : accumulation register 'out1' for next output
+
+Wstart = A.size * 4
+Ystart = (A.size + W.size) * 4
+m.write_f32_vec(A.flatten(), 0)
+m.write_f32_vec(np.transpose(W, axes=[3, 0, 1, 2]).flatten(), Wstart)
+# transpose W so that the output-channels is first axes
+
+# init base addresses
+m.ADD(10, 0, 0)   # for A
+m.LI(11, Wstart)  # for W
+m.LI(12, Ystart)  # for Y
+
+C = 8   # output-channels
+I = 12  # input-image size
+I2 = I//2  # output-image
+
+for chan in range(C): # 'chan' refers to 'output-channel'
+  # load 3x3x3 weights for output-channel 'chan'
+  for i in range(3):
+    for j in range(3):
+      for k in range(3):  # 'k' is input-channel
+        m.FLW_S(9*i+3*j+k, (9*i+3*j+k)*4, 11)  # f[i, j, k] = W[i, j, k, chan]
+
+  # compute all outputs (6x6) for channel 'chan'
+  for row in range(1, I, 2):
+    for col in range(I):
+      # load 3*3 activations, perform 27 muls, and store 1 output
+      for dot in range(0, 3 if row < I-1 else 2):  # last row is special
+        for k in range(3):  # 'k' is input-channel
+          init = (dot == 0) and (k == 0)  # shortcut for below if/else
+
+          # load one activation from memory
+          m.FLW_S(27, (36*(row-1+dot) + 3*col + k)*4, 10)  # A[row-1+dot, col, k]
+
+          # compute 3 muls with weights W[dot, 0:3]
+          if (col % 2) == 0:  # even columns
+            if col > 0:
+              m.FMADD_S(28, 27, 9*dot+3*2+k, 28)  # f28 += f27 * W[dot, 2, k]
+            if init:
+              m.FMUL_S(29, 27, 9*dot+3*0)         # f29  = f27 * W[dot, 0, 0]
+            else:
+              m.FMADD_S(29, 27, 9*dot+3*0+k, 29)  # f29 += f27 * W[dot, 0, k]
+          else:  # odd columns
+            if init:
+              m.FMADD_S(28, 27, 9*dot+3*1, 29)    # f28  = f27 * W[dot, 1, 0] + f29
+            else:
+              m.FMADD_S(28, 27, 9*dot+3*1+k, 28)  # f28 += f27 * W[dot, 1, k]
+
+      # store result
+      if col > 0 and (col % 2) == 0:
+        m.FSW_S(28, (I2*(row-1)//2 + (col-2)//2)*4, 12)  # Yasm[chan, (row-1)/2, (col-2)/2]
+      if (col == I-1):
+        m.FSW_S(28, (I2*(row-1)//2 + (col-1)//2)*4, 12)  # Yasm[chan, (row-1)/2, (col-1)/2]
+
+  # increment base addresses
+  m.ADDI(11, 11, 27*4)     # for W
+  m.ADDI(12, 12, I2*I2*4)  # for Y
+
+  # TODOs:
+  #  - parameterize above and eventually move into a def
+  #  - reduce number of loads by computing several outputs in parallel (each output
+  #    requires two registers, so we could compute two outputs in parallel)
+
+# compare results against expected Y
+Yasm = np.transpose(m.read_f32_vec(Ystart, size=6*6*8).reshape(8, 6, 6), axes=[1, 2, 0])
 m.print_rel_err(Yasm, Y)
