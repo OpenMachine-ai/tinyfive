@@ -2,7 +2,7 @@
 
 import numpy as np
 import keras as kr
-from keras.layers import Conv2D
+from keras.layers import Conv2D, DepthwiseConv2D
 from machine import machine
 # alternatively, uncomment the line below to use the tinyfive package
 #   from tinyfive.machine import machine
@@ -14,7 +14,7 @@ m = machine(mem_size=2000000)  # instantiate RISC-V machine with 2MB of memory
 #-------------------------------------------------------------------------------
 # Example 1: 4x4 Dense layer
 #-------------------------------------------------------------------------------
-print('-------------- Example 1: ------------------------')
+print('-------------- Example 1: Dense layer ---------------------------------')
 # This is a very small dense layer example using floating point
 
 # generate 4x4 matrices A and B (float32) and store them in memory
@@ -51,9 +51,9 @@ m.print_rel_err(res, np.matmul(A, B))
 # Output: should be very small, e.g. smaller than 1e-06, but could be larger
 
 #-------------------------------------------------------------------------------
-# Example 2: 1x1 Conv2D with 128 input and 128 output channels, 4x4 image
+# Example 2: Conv2D 1x1 with 128 input and 128 output channels, 4x4 image
 #-------------------------------------------------------------------------------
-print('-------------- Example 2: ------------------------')
+print('-------------- Example 2: Conv2D 1x1 layer ----------------------------')
 m.clear_mem()
 m.clear_cpu()
 
@@ -175,10 +175,13 @@ for i in range(4):
 m.lbl('end')
 
 # TODOs:
-#  - replace the outer for loop (i, j, k) by assembly code with branches to
+#  - replace the outer for-loop (i, j, k) by assembly code with branches to
 #    reduce the image size
 #  - clean up the indexing and base address pointers
 #  - use mnemonics x9 and f9 etc. instead of '9'
+#  - rewrite above using only upper-case instructions to speed up runtime
+#  - parameterize the assembly code and put it in a def so that it can be used
+#    for other shapes, too
 
 # execute program from 'start' to 'end'
 m.exe(start='start', end='end')
@@ -188,3 +191,186 @@ m.print_perf()
 Yasm = m.read_f32_vec(Ystart, size=16*128).reshape(16, 128)  # read result matrix
 m.print_rel_err(Yasm, Y)
 m.print_rel_err(Yasm, Ycon)
+
+#-------------------------------------------------------------------------------
+# Example 3: Depthwise Conv2D 3x3 with 4 channels, stride=1, 6x6 image
+#-------------------------------------------------------------------------------
+print('-------------- Example 3: Depthwise Conv2D 3x3 layer ------------------')
+m.clear_mem()
+m.clear_cpu()
+
+#-------------------------------------------------------------------------------
+# generate activations and weights, run inference
+A = np.random.normal(size=(1, 6, 6, 4)).astype(np.float32)
+W = np.random.normal(size=(3, 3, 4)).astype(np.float32)
+# activation shape: (1, 6, 6, 4) : batch-size, 6x6 image, channels
+# kernel shape: (3, 3, 4) : 3x3 kernel, channels
+
+# define layer and run inference
+layer = DepthwiseConv2D(3, padding='same', input_shape=(6, 6, 4),
+                        depthwise_initializer=kr.initializers.constant(W))
+Yk = layer(A)
+Y = Yk.numpy().reshape(6, 6, 4)  # flatten
+
+#-------------------------------------------------------------------------------
+# assembly code (with uppercase instructions)
+
+# register map:
+#   x[10] : base address for A[chan]
+#   x[11] : base address for W[chan]
+#   x[12] : base address for Y[chan]
+#   f[0] .. f[8]: the 9 weights of a channel, stored in row-major order
+#   f[9]  : holds the latest activation loaded from memory
+#   f[10] : accumulation register 'out0' for current output
+#   f[11] : accumulation register 'out1' for next output
+#   f[12] : accumulation register 'out2' for next-next output
+
+# write A and W to memory
+Wstart = A.size * 4
+Ystart = (A.size + W.size) * 4
+m.write_f32_vec(np.transpose(A, axes=[3, 0, 1, 2]).flatten(), 0)    # write A to mem[0]
+m.write_f32_vec(np.transpose(W, axes=[2, 0, 1]).flatten(), Wstart)  # write W to mem[Wstart]
+# note on the transpose in the last two lines: We rearrange the matrices so
+# that the last axis (channel) is now the first axis (aka 'channel-first order').
+# That's important so that when we flatten it in row-major, all the pixels of the
+# first channel are contigously in memory, because we process one channel at a time
+
+# init base addresses
+m.ADD(10, 0, 0)   # for A
+m.LI(11, Wstart)  # for W
+m.LI(12, Ystart)  # for Y
+
+for chan in range(4):
+  # load 3x3 weights for channel 'chan'
+  for i in range(3):
+    for j in range(3):
+      m.FLW_S(3*i+j, (3*i + j)*4, 11)  # f[i, j] = W[i, j, chan]
+
+  # comupte all outputs (6x6) for channel 'chan'
+  for row in range(6):
+    for col in range(6):
+      # load 3 activations, perform 9 muls, and store 1 output
+      dot_start = 0 if row > 0 else 1  # first row is special
+      dot_end   = 3 if row < 5 else 2  # last row is special
+      for dot in range(dot_start, dot_end):
+        # load one activation from memory
+        m.FLW_S(9, (6*(row-1+dot) + col)*4, 10)  # A[row-1+dot, col, chan]
+
+        # compute 3 muls with weights W[dot, 0:3]
+        if dot == dot_start:
+          if col > 0:
+            m.FMADD_S(10, 9, 3*dot+2, 11)  # f10 = f9 * W[dot, 2] + f11
+            m.FMADD_S(11, 9, 3*dot+1, 12)  # f11 = f9 * W[dot, 1] + f12
+          else:
+            m.FMUL_S(11, 9, 3*dot+1)          # f11 = f9 * W[dot, 1]
+          if col < 5: m.FMUL_S(12, 9, 3*dot)  # f12 = f9 * W[dot, 0]
+        else:
+          m.FMADD_S(11, 9, 3*dot+1, 11)              # f11 += f9 * W[dot, 1]
+          if col > 0: m.FMADD_S(10, 9, 3*dot+2, 10)  # f10 += f9 * W[dot, 2]
+          if col < 5: m.FMADD_S(12, 9, 3*dot, 12)    # f12 += f9 * W[dot, 0]
+      # store result
+      if col > 0:  m.FSW_S(10, (6*row + col-1)*4, 12)  # Yasm[row, col-1, chan]
+      if col == 5: m.FSW_S(11, (6*row + col)*4, 12)    # Yasm[row, col, chan]
+
+  # increment base addresses
+  m.ADDI(11, 11, 9*4)    # for W(chan)
+  m.ADDI(10, 10, 6*6*4)  # for A(chan)
+  m.ADDI(12, 12, 6*6*4)  # for Y(chan)
+
+# compare results against expected Y
+Yasm = np.transpose(m.read_f32_vec(Ystart, size=6*6*4).reshape(4, 6, 6), axes=[1, 2, 0])
+m.print_rel_err(Yasm, Y)  # compare Yasm against Y
+
+#-------------------------------------------------------------------------------
+# Example 4: Conv2D 3x3, 3 in-channels, 8 out-channels, stride=1, 12x12 image
+#-------------------------------------------------------------------------------
+print('-------------- Example 4: Conv2D 3x3 layer ----------------------------')
+m.clear_mem()
+m.clear_cpu()
+
+#-------------------------------------------------------------------------------
+# generate activations and weights, run inference
+A = np.random.normal(size=(1, 12, 12, 3)).astype(np.float32)
+W = np.random.normal(size=(3, 3, 3, 8)).astype(np.float32)
+# input shape:  (1, 12, 12, 3) : batch-size, 12x12 image, channels
+# output shape: (1, 12, 12, 8) : batch-size, 12x12 image, channels
+# kernel shape: (3, 3, 3, 8) : 3x3 kernel, in-channels, out-channels
+
+# define layer and run inference
+layer = Conv2D(8, 3, input_shape=(12, 12, 3), padding='same',
+               kernel_initializer=kr.initializers.constant(W))
+Yk = layer(A)
+Y = Yk.numpy().reshape(12, 12, 8)
+
+#-------------------------------------------------------------------------------
+# assembly code (with uppercase instructions)
+
+# register map:
+#   x[10] : base address for A[chan]
+#   x[11] : base address for W[chan]
+#   x[12] : base address for Y[chan]
+#   f[0] .. f[26]: the 27 weights (3, 3, 3) for one output channel
+#   f[27] : holds the latest activation loaded from memory
+#   f[28] : accumulation register 'out0' for current output
+#   f[29] : accumulation register 'out1' for next output
+#   f[30] : accumulation register 'out2' for next-next output
+
+Wstart = A.size * 4
+Ystart = (A.size + W.size) * 4
+m.write_f32_vec(A.flatten(), 0)
+m.write_f32_vec(np.transpose(W, axes=[3, 0, 1, 2]).flatten(), Wstart)
+# transpose W so that the output-channels is first axes
+
+# init base addresses
+m.ADD(10, 0, 0)   # for A
+m.LI(11, Wstart)  # for W
+m.LI(12, Ystart)  # for Y
+
+I = 12  # image size
+C = 8   # output-channels
+
+for chan in range(C): # 'chan' refers to 'output-channel'
+  # load 3x3x3 weights for output-channel 'chan'
+  for i in range(3):
+    for j in range(3):
+      for k in range(3):  # 'k' is input-channel
+        m.FLW_S(9*i+3*j+k, (9*i+3*j+k)*4, 11)  # f[i, j, k] = W[i, j, k, chan]
+
+  # comupte all outputs (6x6) for channel 'chan'
+  for row in range(I):
+    for col in range(I):
+      # load 3*3 activations, perform 27 muls, and store 1 output
+      dot_start = 0 if row > 0   else 1  # first row is special
+      dot_end   = 3 if row < I-1 else 2  # last row is special
+      for dot in range(dot_start, dot_end):
+        for k in range(3):  # 'k' is input-channel
+          # load one activation from memory
+          m.FLW_S(27, (36*(row-1+dot) + 3*col + k)*4, 10)  # A[row-1+dot, col, k]
+
+          # compute 3 muls with weights W[dot, 0:3]
+          if dot == dot_start and k == 0:
+            if col > 0:
+              m.FMADD_S(28, 27, 9*dot+3*2, 29)  # f28 = f27 * W[dot, 2, 0] + f29
+              m.FMADD_S(29, 27, 9*dot+3*1, 30)  # f29 = f27 * W[dot, 1, 0] + f30
+            else:
+              m.FMUL_S(29, 27, 9*dot+3*1)       # f29 = f27 * W[dot, 1, 0]
+            if col < I-1:
+              m.FMUL_S(30, 27, 9*dot)           # f30 = f27 * W[dot, 0, 0]
+          else:
+            m.FMADD_S(29, 27, 9*dot+3*1+k, 29)                # f29 += f27 * W[dot, 1, k]
+            if col > 0:   m.FMADD_S(28, 27, 9*dot+3*2+k, 28)  # f28 += f27 * W[dot, 2, k]
+            if col < I-1: m.FMADD_S(30, 27, 9*dot+k, 30)      # f30 += f27 * W[dot, 0, k]
+
+      # store result
+      if col > 0: m.FSW_S(28, (I*row + col-1)*4, 12)  # Yasm[chan, row, col-1]
+      if col == I-1: m.FSW_S(29, (I*row + col)*4, 12) # Yasm[chan, row, col]
+
+  # increment base addresses
+  m.ADDI(11, 11, 27*4)   # for W
+  m.ADDI(12, 12, I*I*4)  # for Y
+
+  # TODO: parameterize above and eventually move into a def
+
+# compare results against expected Y
+Yasm = np.transpose(m.read_f32_vec(Ystart, size=I*I*8).reshape(8, I, I), axes=[1, 2, 0])
+m.print_rel_err(Yasm, Y)

@@ -428,8 +428,9 @@ class machine:
   # pseudoinstructions
 
   def hi20(s, val): return (val + 0x800) >> 12  # higher 20 bits (+1 if val[11]==1)
-  def lo12(s, val): return val & 0xfff          # lower 12 bits
-  # above functions are copied from LLVM
+  def lo12(s, val):
+    return (val & 0x7ff) - (val & 0x800) # lower 12 bits and convert to signed int12
+  # above functions are similar to LLVM
   # https://github.com/llvm/llvm-project/blob/main/lld/ELF/Arch/RISCV.cpp
   # note that ADDI interprets the immediate as a 12-bit signed. So if bit[11] is
   # set (i.e. value -2048 = -0x800), then we have to add +1 to the upper 20 bits
@@ -438,8 +439,8 @@ class machine:
   # Example: 0xdeadbeef -> hi20 = 0xdeadc; lo12 = -273
 
   def LI(s, rd, imm):
-    LUI (s, rd,     hi20(imm))
-    ADDI(s, rd, rd, lo12(imm))
+    s.LUI (rd,     s.hi20(imm))
+    s.ADDI(rd, rd, s.lo12(imm))
   # TODO: add a corresponding lower-case instruction
 
   # TODO: add more pseudoinstructions
