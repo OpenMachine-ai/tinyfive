@@ -18,6 +18,7 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
   - [Example 1: Multiply two numbers](#example-1-multiply-two-numbers)
   - [Example 2: Add two vectors](#example-2-add-two-vectors)
   - [Example 3: Multiply two matrices](#example-3-multiply-two-matrices)
+  - [Example 4: Neural network layers](#example-4-neural-network-layers)
 - [Running in colab](#running-in-colab)
 - [Running without package](#running-without-package)
 - [Speed](#speed)
@@ -382,6 +383,9 @@ The table below shows a speedup of 1.7 with the following caveats:
 |:-----------:|:-----:|:---------:|:----:|:-----:|:---:|:---:|:------:|:---------:|:-------:|
 | Example 3.3 | 92B   | 9         | 80   | 16    | 64  | 89  | 20     | 269       | 1       |
 | Example 3.4 | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
+
+### Example 4: Neural network layers
+Coming soon, see [file layer_examples.py](layer_examples.py)
 
 ## Running in colab
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb">
