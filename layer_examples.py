@@ -65,12 +65,10 @@ Wk = np.random.normal(size=(1, 1, 128, 128)).astype(np.float32)
   # output shape: (1, 4, 4, 128) : batch-size, 4x4 image, channels
   # kernel shape: (1, 1, 128, 128) : 1x1 kernel, in-channels, out-channels
 
-# define layer and run inference
-layer = Conv2D(128, 1, input_shape=(4, 4, 128),
-               kernel_initializer=kr.initializers.constant(Wk))
-Yk = layer(Ak)
+# run inference with keras (golden reference)
+Yk = Conv2D(128, 1, kernel_initializer=kr.initializers.constant(Wk))(Ak)
 # TODO: use below if you want to use bias and ReLU activation
-#   Conv2D(128, 1, activation="relu", name="layer1", input_shape=(3, 4, 128),
+#  layer = Conv2D(128, 1, activation="relu", name="layer1", input_shape=(3, 4, 128),
 #          kernel_initializer=kr.initializers.constant(Wk),
 #          bias_initializer=kr.initializers.constant(Bk))
 # Instead of using kr.initializer, you could use set_weights() as follows:
@@ -206,10 +204,9 @@ W = np.random.normal(size=(3, 3, 4)).astype(np.float32)
 # activation shape: (1, 6, 6, 4) : batch-size, 6x6 image, channels
 # kernel shape: (3, 3, 4) : 3x3 kernel, channels
 
-# define layer and run inference
-layer = DepthwiseConv2D(3, padding='same', input_shape=(6, 6, 4),
-                        depthwise_initializer=kr.initializers.constant(W))
-Yk = layer(A)
+# run inference with keras (golden reference)
+Yk = DepthwiseConv2D(3, padding='same',
+                     depthwise_initializer=kr.initializers.constant(W))(A)
 Y = Yk.numpy().reshape(6, 6, 4)  # flatten
 
 #-------------------------------------------------------------------------------
@@ -303,10 +300,8 @@ W = np.random.normal(size=(3, 3, 3, 8)).astype(np.float32)
 # output shape: (1, 12, 12, 8) : batch-size, 12x12 image, channels
 # kernel shape: (3, 3, 3, 8) : 3x3 kernel, in-channels, out-channels
 
-# define layer and run inference
-layer = Conv2D(8, 3, input_shape=(12, 12, 3), padding='same',
-               kernel_initializer=kr.initializers.constant(W))
-Yk = layer(A)
+# run inference with keras (golden reference)
+Yk = Conv2D(8, 3, padding='same', kernel_initializer=kr.initializers.constant(W))(A)
 Y = Yk.numpy().reshape(12, 12, 8)
 
 #-------------------------------------------------------------------------------
@@ -399,10 +394,9 @@ W = np.random.normal(size=(3, 3, 3, 8)).astype(np.float32)
 # output shape: (1, 6, 6, 8) : batch-size, 6x6 image, channels
 # kernel shape: (3, 3, 3, 8) : 3x3 kernel, in-channels, out-channels
 
-# define layer and run inference
-layer = Conv2D(8, 3, input_shape=(12, 12, 3), padding='same', strides=2,
-               kernel_initializer=kr.initializers.constant(W))
-Yk = layer(A)
+# run inference with keras (golden reference)
+Yk = Conv2D(8, 3, padding='same', strides=2,
+            kernel_initializer=kr.initializers.constant(W))(A)
 Y = Yk.numpy().reshape(6, 6, 8)
 
 # Keras does the striding as follows: the first valid output equals the
@@ -424,7 +418,7 @@ Wstart = A.size * 4
 Ystart = (A.size + W.size) * 4
 m.write_f32_vec(A.flatten(), 0)
 m.write_f32_vec(np.transpose(W, axes=[3, 0, 1, 2]).flatten(), Wstart)
-# transpose W so that the output-channels is first axes
+# transpose W so that the output-channel is first axes
 
 # init base addresses
 m.ADD(10, 0, 0)   # for A
