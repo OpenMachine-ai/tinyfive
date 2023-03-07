@@ -3,6 +3,7 @@
 import numpy as np
 import keras as kr
 from keras.layers import Conv2D, DepthwiseConv2D
+from keras.initializers import constant
 from machine import machine
 # alternatively, uncomment the line below to use the tinyfive package
 #   from tinyfive.machine import machine
@@ -77,12 +78,12 @@ Wk = np.random.normal(size=(1, 1, C, C2)).astype(np.float32)
   # kernel shape: (1, 1, C, C2) : 1x1 kernel, in-channels, out-channels
 
 # run inference with keras (golden reference)
-Yk = Conv2D(C2, 1, kernel_initializer=kr.initializers.constant(Wk))(Ak)
+Yk = Conv2D(C2, 1, kernel_initializer=constant(Wk))(Ak)
 
 # TODO: use below if you want to use bias and ReLU activation
 #  layer = Conv2D(128, 1, activation="relu", name="layer1", input_shape=(4, 4, 128),
-#          kernel_initializer=kr.initializers.constant(Wk),
-#          bias_initializer=kr.initializers.constant(Bk))
+#          kernel_initializer=constant(Wk),
+#          bias_initializer=constant(Bk))
 # Instead of using kr.initializer, you could use set_weights() as follows:
 #   Yk = layer(Ak)  # dummy run with random weights, needed before set_weights()
 #   layer.set_weights([Wk, Bk])
@@ -206,17 +207,23 @@ print('-------------- Example 3: Depthwise Conv2D 3x3 layer ------------------')
 m.clear_mem()
 m.clear_cpu()
 
+# shapes and base addresses
+I = 6
+C = 4
+Astart = 0
+Wstart = Astart + I*I*C *4
+Ystart = Wstart + 3*3*C *4
+
 #-------------------------------------------------------------------------------
 # generate activations and weights, run inference
-A = np.random.normal(size=(1, 6, 6, 4)).astype(np.float32)
-W = np.random.normal(size=(3, 3, 4)).astype(np.float32)
-# activation shape: (1, 6, 6, 4) : batch-size, 6x6 image, channels
-# kernel shape: (3, 3, 4) : 3x3 kernel, channels
+A = np.random.normal(size=(1, I, I, C)).astype(np.float32)
+W = np.random.normal(size=(3, 3, C)).astype(np.float32)
+# activation shape: (1, I, I, C) : batch-size, IxI image, channels
+# kernel shape: (3, 3, C) : 3x3 kernel, channels
 
 # run inference with keras (golden reference)
-Yk = DepthwiseConv2D(3, padding='same',
-                     depthwise_initializer=kr.initializers.constant(W))(A)
-Y = Yk.numpy().reshape(6, 6, 4)  # flatten
+Yk = DepthwiseConv2D(3, padding='same', depthwise_initializer=constant(W))(A)
+Y = Yk.numpy().reshape(I, I, C)  # flatten
 
 #-------------------------------------------------------------------------------
 # assembly code (with uppercase instructions)
@@ -232,35 +239,33 @@ Y = Yk.numpy().reshape(6, 6, 4)  # flatten
 #   f[12] : accumulation register 'out2' for next-next output
 
 # write A and W to memory
-Wstart = A.size * 4
-Ystart = (A.size + W.size) * 4
-m.write_f32_vec(np.transpose(A, axes=[3, 0, 1, 2]).flatten(), 0)    # write A to mem[0]
-m.write_f32_vec(np.transpose(W, axes=[2, 0, 1]).flatten(), Wstart)  # write W to mem[Wstart]
+m.write_f32_vec(np.transpose(A, axes=[3, 0, 1, 2]).flatten(), Astart)
+m.write_f32_vec(np.transpose(W, axes=[2, 0, 1]).flatten(), Wstart)
 # note on the transpose in the last two lines: We rearrange the matrices so
 # that the last axis (channel) is now the first axis (aka 'channel-first order').
 # That's important so that when we flatten it in row-major, all the pixels of the
 # first channel are contigously in memory, because we process one channel at a time
 
 # init base addresses
-m.ADD(10, 0, 0)   # for A
+m.LI(10, Astart)  # for A
 m.LI(11, Wstart)  # for W
 m.LI(12, Ystart)  # for Y
 
-for chan in range(4):
+for chan in range(C):
   # load 3x3 weights for channel 'chan'
   for i in range(3):
     for j in range(3):
-      m.FLW_S(3*i+j, (3*i + j)*4, 11)  # f[i, j] = W[i, j, chan]
+      m.FLW_S(3*i+j, (3*i + j)*4, 11)  # f[i, j] = W[chan, i, j]
 
-  # compute all outputs (6x6) for channel 'chan'
-  for row in range(6):
-    for col in range(6):
+  # compute all outputs (IxI) for channel 'chan'
+  for row in range(I):
+    for col in range(I):
       # load 3 activations, perform 9 muls, and store 1 output
-      dot_start = 0 if row > 0 else 1  # first row is special
-      dot_end   = 3 if row < 5 else 2  # last row is special
+      dot_start = 0 if row > 0 else 1    # first row is special
+      dot_end   = 3 if row < I-1 else 2  # last row is special
       for dot in range(dot_start, dot_end):
         # load one activation from memory
-        m.FLW_S(9, (6*(row-1+dot) + col)*4, 10)  # A[row-1+dot, col, chan]
+        m.FLW_S(9, (I*(row-1+dot) + col)*4, 10)  # A[chan, row-1+dot, col]
 
         # compute 3 muls with weights W[dot, 0:3]
         if dot == dot_start:
@@ -268,20 +273,20 @@ for chan in range(4):
             m.FMADD_S(10, 9, 3*dot+2, 11)  # f10 = f9 * W[dot, 2] + f11
             m.FMADD_S(11, 9, 3*dot+1, 12)  # f11 = f9 * W[dot, 1] + f12
           else:
-            m.FMUL_S(11, 9, 3*dot+1)          # f11 = f9 * W[dot, 1]
-          if col < 5: m.FMUL_S(12, 9, 3*dot)  # f12 = f9 * W[dot, 0]
+            m.FMUL_S(11, 9, 3*dot+1)            # f11 = f9 * W[dot, 1]
+          if col < I-1: m.FMUL_S(12, 9, 3*dot)  # f12 = f9 * W[dot, 0]
         else:
-          m.FMADD_S(11, 9, 3*dot+1, 11)              # f11 += f9 * W[dot, 1]
-          if col > 0: m.FMADD_S(10, 9, 3*dot+2, 10)  # f10 += f9 * W[dot, 2]
-          if col < 5: m.FMADD_S(12, 9, 3*dot, 12)    # f12 += f9 * W[dot, 0]
+          m.FMADD_S(11, 9, 3*dot+1, 11)                # f11 += f9 * W[dot, 1]
+          if col > 0:   m.FMADD_S(10, 9, 3*dot+2, 10)  # f10 += f9 * W[dot, 2]
+          if col < I-1: m.FMADD_S(12, 9, 3*dot, 12)    # f12 += f9 * W[dot, 0]
       # store result
-      if col > 0:  m.FSW_S(10, (6*row + col-1)*4, 12)  # Yasm[row, col-1, chan]
-      if col == 5: m.FSW_S(11, (6*row + col)*4, 12)    # Yasm[row, col, chan]
+      if col > 0:    m.FSW_S(10, (I*row + col-1)*4, 12)  # Yasm[chan, row, col-1]
+      if col == I-1: m.FSW_S(11, (I*row + col  )*4, 12)  # Yasm[chan, row, col]
 
   # increment base addresses
   m.ADDI(11, 11, 9*4)    # for W(chan)
-  m.ADDI(10, 10, 6*6*4)  # for A(chan)
-  m.ADDI(12, 12, 6*6*4)  # for Y(chan)
+  m.ADDI(10, 10, I*I*4)  # for A(chan)
+  m.ADDI(12, 12, I*I*4)  # for Y(chan)
 
   # TODOs:
   #  - parameterize above and eventually move into a def
@@ -291,7 +296,7 @@ for chan in range(4):
   #    parallel; and when image-size is 6x6, process an entire column in parallel)
 
 # compare results against expected Y
-Yasm = np.transpose(m.read_f32_vec(Ystart, size=6*6*4).reshape(4, 6, 6), axes=[1, 2, 0])
+Yasm = np.transpose(m.read_f32_vec(Ystart, size=6*6*4).reshape(C, I, I), axes=[1, 2, 0])
 m.print_rel_err(Yasm, Y)  # compare Yasm against Y
 
 #-------------------------------------------------------------------------------
@@ -310,7 +315,7 @@ W = np.random.normal(size=(3, 3, 3, 8)).astype(np.float32)
 # kernel shape: (3, 3, 3, 8) : 3x3 kernel, in-channels, out-channels
 
 # run inference with keras (golden reference)
-Yk = Conv2D(8, 3, padding='same', kernel_initializer=kr.initializers.constant(W))(A)
+Yk = Conv2D(8, 3, padding='same', kernel_initializer=constant(W))(A)
 Y = Yk.numpy().reshape(12, 12, 8)
 
 #-------------------------------------------------------------------------------
@@ -404,8 +409,7 @@ W = np.random.normal(size=(3, 3, 3, 8)).astype(np.float32)
 # kernel shape: (3, 3, 3, 8) : 3x3 kernel, in-channels, out-channels
 
 # run inference with keras (golden reference)
-Yk = Conv2D(8, 3, padding='same', strides=2,
-            kernel_initializer=kr.initializers.constant(W))(A)
+Yk = Conv2D(8, 3, padding='same', strides=2, kernel_initializer=constant(W))(A)
 Y = Yk.numpy().reshape(6, 6, 8)
 
 # Keras does the striding as follows: the first valid output equals the
