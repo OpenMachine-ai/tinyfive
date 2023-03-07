@@ -51,24 +51,36 @@ m.print_rel_err(res, np.matmul(A, B))
 # Output: should be very small, e.g. smaller than 1e-06, but could be larger
 
 #-------------------------------------------------------------------------------
-# Example 2: Conv2D 1x1 with 128 input and 128 output channels, 4x4 image
+# Example 2: Conv2D 1x1, 32 input and 32 output channels, 6x6 image
 #-------------------------------------------------------------------------------
 print('-------------- Example 2: Conv2D 1x1 layer ----------------------------')
 m.clear_mem()
 m.clear_cpu()
 
+# shapes
+I = 6   # resolution of image (tested it up to 48 with C = 8)
+C = 32  # input-channels (tested it up to 128)
+C2 = C  # output-channels (tested it up to 128)
+
+# base addresses
+Astart = 0
+Wstart = Astart + I*I*C * 4
+Ystart = Wstart + C*C2 * 4
+code_start = Ystart + I*I*C2 * 4
+
 #-------------------------------------------------------------------------------
 # generate activations and weights for keras (suffix *k is for keras)
-Ak = np.random.normal(size=(1, 4, 4, 128)).astype(np.float32)
-Wk = np.random.normal(size=(1, 1, 128, 128)).astype(np.float32)
-  # input shape:  (1, 4, 4, 128) : batch-size, 4x4 image, channels
-  # output shape: (1, 4, 4, 128) : batch-size, 4x4 image, channels
-  # kernel shape: (1, 1, 128, 128) : 1x1 kernel, in-channels, out-channels
+Ak = np.random.normal(size=(1, I, I, C)).astype(np.float32)
+Wk = np.random.normal(size=(1, 1, C, C2)).astype(np.float32)
+  # input shape:  (1, I, I, C)  : batch-size, 4x4 image, channels
+  # output shape: (1, I, I, C2) : batch-size, 4x4 image, channels
+  # kernel shape: (1, 1, C, C2) : 1x1 kernel, in-channels, out-channels
 
 # run inference with keras (golden reference)
-Yk = Conv2D(128, 1, kernel_initializer=kr.initializers.constant(Wk))(Ak)
+Yk = Conv2D(C2, 1, kernel_initializer=kr.initializers.constant(Wk))(Ak)
+
 # TODO: use below if you want to use bias and ReLU activation
-#  layer = Conv2D(128, 1, activation="relu", name="layer1", input_shape=(3, 4, 128),
+#  layer = Conv2D(128, 1, activation="relu", name="layer1", input_shape=(4, 4, 128),
 #          kernel_initializer=kr.initializers.constant(Wk),
 #          bias_initializer=kr.initializers.constant(Bk))
 # Instead of using kr.initializer, you could use set_weights() as follows:
@@ -80,26 +92,26 @@ Yk = Conv2D(128, 1, kernel_initializer=kr.initializers.constant(Wk))(Ak)
 
 #-------------------------------------------------------------------------------
 # flatten keras tensors, compare with matmul
-A = Ak.reshape(16, 128)   # Ak (1, 4, 4, 128)   -> A (16, 128)
-W = Wk.reshape(128, 128)  # Wk (1, 1, 128, 128) -> W (128, 128)
-Y = Yk.numpy().reshape(16, 128)
+A = Ak.reshape(I*I, C)  # Ak (1, I, I, C)  -> A (I*I, C)
+W = Wk.reshape(C, C2)   # Wk (1, 1, C, C2) -> W (C, C2)
+Y = Yk.numpy().reshape(I*I, C2)
 m.print_rel_err(np.matmul(A, W), Y)  # compare matmul vs. keras conv2D
 
 #-------------------------------------------------------------------------------
 # proof of concept: split W and A into 4x4 submatrices, then compute matmul(A, W)
-Asplit = np.empty((4, 32, 4, 4))
-Wsplit = np.empty((32, 32, 4, 4))
-for i in range(32):
-  for j in range(32):
+Asplit = np.empty((I*I//4, C//4, 4, 4))
+Wsplit = np.empty((C//4, C2//4, 4, 4))
+for i in range(C//4):
+  for j in range(C2//4):
     Wsplit[i, j] = W[i*4:i*4+4, j*4:j*4+4]
-for i in range(4):
-  for j in range(32):
+for i in range(I*I//4):
+  for j in range(C//4):
     Asplit[i, j] = A[i*4:i*4+4, j*4:j*4+4]
 # compute the big matmul by smaller 4x4 matmuls
-Ycon = np.zeros((16, 128))
-for i in range(4):
-  for j in range(32):
-    for k in range(32):
+Ycon = np.zeros((I*I, C2))
+for i in range(I*I//4):
+  for j in range(C2//4):
+    for k in range(C//4):
       Ycon[4*i:4*i+4, 4*j:4*j+4] += np.matmul(Asplit[i, k], Wsplit[k, j])
 m.print_rel_err(Ycon, Y)  # compare Ycon against Y
 
@@ -116,40 +128,37 @@ m.print_rel_err(Ycon, Y)  # compare Ycon against Y
 #   f[16] .. f[31]: the 16 outputs res[0, 0] ... res[4, 4]
 
 # write A and W to memory
-Wstart = A.size * 4
-Ystart = Wstart + W.size * 4
-code_start = Ystart + Wstart + 1000
-m.write_f32_vec(A.flatten(), 0)       # write A to mem[0]
+m.write_f32_vec(A.flatten(), Astart)  # write A to mem[Astart]
 m.write_f32_vec(W.flatten(), Wstart)  # write W to mem[Wstart]
 
 # store assembly program starting at address 'code_start'
 m.pc = code_start
 m.lbl('start')
 
-# matmul (16, 128) x (128, 128) -> (16, 128)
-for i in range(4):
-  m.asm('lui',  9,      m.hi20(4*128*4*i))  # m.x[9] = 4*128*4*i
-  m.asm('addi', 9, 9,   m.lo12(4*128*4*i))
-  m.asm('lui',  12,     m.hi20(Ystart + 4*128*4*i))  # m.x[12] = Ystart + ..
-  m.asm('addi', 12, 12, m.lo12(Ystart + 4*128*4*i))
+# matmul (I*I, C) x (C, C2) -> (I*I, C2)
+for i in range(I*I//4):
+  m.asm('lui',  9,      m.hi20(Astart + 4*C*4*i))   # m.x[9] =  ...
+  m.asm('addi', 9, 9,   m.lo12(Astart + 4*C*4*i))
+  m.asm('lui',  12,     m.hi20(Ystart + 4*C2*4*i))  # m.x[12] = ...
+  m.asm('addi', 12, 12, m.lo12(Ystart + 4*C2*4*i))
 
-  # matmul (4, 128) x (128, 128) -> (4, 128)
-  for j in range(32):
+  # matmul (4, C) x (C, C2) -> (4, C2)
+  for j in range(C2//4):
     # set base address pointers
     m.asm('add', 10, 9, 0) # reset Asplit pointer to x[9]
     m.asm('lui',  11,     m.hi20(Wstart + 16*j))  # m.x[11] = Wstart + 16*j
     m.asm('addi', 11, 11, m.lo12(Wstart + 16*j))
 
-    # matmul (4, 128) x (128, 4) -> (4, 4)
-    for k in range(32):
+    # matmul (4, C) x (C, 4) -> (4, 4)
+    for k in range(C//4):
       # compute one 4x4 matmul (by computing 4 outer products)
       for ii in range(4):
         # load row ii of Wsplit into registers f[12] ... f[15]
         for col in range(4):
-          m.asm('flw.s', 12+col, 4*(col+128*ii), 11)
+          m.asm('flw.s', 12+col, 4*(col+C2*ii), 11)
         # compute outer-product in row-major order
         for row in range(4):
-          m.asm('flw.s', 11, 4*(128*row+ii), 10)  # load f[11] with A[row, ii]
+          m.asm('flw.s', 11, 4*(C*row+ii), 10)  # load f[11] with A[row, ii]
           for col in range(4):
             if ii==0 and k==0:  # no accumulation for the very first products
               m.asm('fmul.s', 16+4*row+col, 11, 12+col)  # f[] = f[11] * f[12]
@@ -158,8 +167,8 @@ for i in range(4):
 
       # increment base addresses for Asplit and Wsplit
       m.asm('addi', 10, 10, 4*4)  # increment by 16
-      m.asm('addi', 11, 11, 1024) # increment by 2048 is done by two times 1024
-      m.asm('addi', 11, 11, 1024)
+      m.asm('addi', 11, 11, 4*4*C2//2) # increment by 4*4*C2 by two times 4*4*C2/2
+      m.asm('addi', 11, 11, 4*4*C2//2)
       # note on the last two lines: 12-bit immediates: -2048 .. +2047. So we increment
       # by 1024 two times to achieve 2048 increment. Alternatively, we could decrement
       # the index (because -2048 is possible in one instruction). Or store the W-matrix
@@ -168,7 +177,7 @@ for i in range(4):
     # store results in memory
     for row in range(4):
       for col in range(4):
-        m.asm('fsw.s', 16+4*row+col, 4*(row*128+col), 12)
+        m.asm('fsw.s', 16+4*row+col, 4*(row*C2+col), 12)
     m.asm('addi', 12, 12, 4*4)  # increment Y pointer by 16
 m.lbl('end')
 
@@ -186,7 +195,7 @@ m.exe(start='start', end='end')
 m.print_perf()
 
 # compare results against expected Y
-Yasm = m.read_f32_vec(Ystart, size=16*128).reshape(16, 128)  # read result matrix
+Yasm = m.read_f32_vec(Ystart, size=I*I*C2).reshape(I*I, C2)  # read result matrix
 m.print_rel_err(Yasm, Y)
 m.print_rel_err(Yasm, Ycon)
 
