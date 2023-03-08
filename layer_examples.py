@@ -130,6 +130,7 @@ m.write_f32_vec(w.flatten(), w_base)  # write W to mem[w_base]
 
 # run assembly
 conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start)
+m.print_perf()
 
 # compare results against expected Y
 y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)  # read result matrix

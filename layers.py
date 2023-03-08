@@ -78,7 +78,6 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start):
 
   # execute program from 'start' to 'end'
   m.exe(start='start', end='end')
-  m.print_perf()
 
   # TODOs:
   #  - replace the outer for-loop (i, j, k) by assembly code with branches to
@@ -92,9 +91,10 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start):
 #-------------------------------------------------------------------------------
 # Depthwise Conv2D 3x3 with C channels, RxR image, stride=1
 #-------------------------------------------------------------------------------
-def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base):
+def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base, out_chan_first=True):
   """assembly code with upper-case instruction for depthwise conv2D 3x3 with
-  C channels, R resolution, stride = 1.
+  C channels, R resolution, stride = 1. If out_chan_first==True, then the
+  output shape is (channel, row, col); otherwise shape is (row, col, channel)
   Register map:
     x[10] : base address for A[chan]
     x[11] : base address for W[chan]
@@ -108,9 +108,13 @@ def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base):
   # init base addresses
   m.LI(10, a_base)
   m.LI(11, w_base)
-  m.LI(12, y_base)
+  if out_chan_first:
+    m.LI(12, y_base)
 
   for chan in range(C):
+    if out_chan_first==False:
+        m.LI(12, y_base)
+
     # load 3x3 weights for channel 'chan'
     for i in range(3):
       for j in range(3):
@@ -138,13 +142,23 @@ def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base):
             m.FMADD_S(11, 9, 3*dot+1, 11)                # f11 += f9 * W[dot, 1]
             if col > 0:   m.FMADD_S(10, 9, 3*dot+2, 10)  # f10 += f9 * W[dot, 2]
             if col < R-1: m.FMADD_S(12, 9, 3*dot, 12)    # f12 += f9 * W[dot, 0]
+
         # store result
-        if col > 0:    m.FSW_S(10, (R*row + col-1)*4, 12)  # y_asm[chan, row, col-1]
-        if col == R-1: m.FSW_S(11, (R*row + col  )*4, 12)  # y_asm[chan, row, col]
+        if out_chan_first:
+          if col > 0:    m.FSW_S(10, (R*row + col-1)*4, 12)  # Y[chan, row, col-1]
+          if col == R-1: m.FSW_S(11, (R*row + col  )*4, 12)  # Y[chan, row, col]
+        else:
+          if col > 0:    m.FSW_S(10, (C*(col-1) + chan)*4, 12)  # Y[row, col-1, chan]
+          if col == R-1: m.FSW_S(11, (C*col + chan)*4, 12)      # Y[row, col, chan]
+      if out_chan_first==False:
+        m.ADDI(12, 12, C*R*4)  # for Y(chan)
+
     # increment base addresses
     m.ADDI(11, 11, 9*4)    # for W(chan)
     m.ADDI(10, 10, R*R*4)  # for A(chan)
-    m.ADDI(12, 12, R*R*4)  # for Y(chan)
+    if out_chan_first:
+      m.ADDI(12, 12, R*R*4)  # for Y(chan)
+
     # TODOs:
     #  - parameterize above and eventually move into a def
     #  - add example for stride=2
