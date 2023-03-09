@@ -154,27 +154,25 @@ R = 96
 Q = R//2
 y_base = a2_base
 
-# run assembly
 conv_3x3x3_stride2(m, F, R, a_base=a1_base, w_base=w1_base, y_base=a2_base)
 
-# compare results against expected
+# compare results against keras
 l1_asm = np.transpose(m.read_f32_vec(y_base, size=Q*Q*8).reshape(F, Q, Q), axes=[1, 2, 0])
 l1_ref = l1.numpy().reshape(Q, Q, F)
 m.print_rel_err(l1_asm, l1_ref)
 
 #-------------------------------------------------------------------------------
-# layer 2: Depthwise Conv2D 3x3 with 8 channels, 48x48 resolution, stride=1
+# layer 2: Depthwise Conv2D 3x3, 8 channels, 48x48 resolution, stride=1
 #-------------------------------------------------------------------------------
 R = 48
 C = 8
 y_base = a3_base
 
-# run assembly
 dw_conv_3x3_stride1(m, C, R, a_base=a2_base, w_base=w2_base, y_base=y_base,
                     out_chan_first=False)
-# Note: set out_chan_first=False so that output is non-transposed shape (R, R, C)
+# Note: set out_chan_first=False so that output is shape (R, R, C)
 
-# compare results against expected
+# compare results against keras
 l2_asm = m.read_f32_vec(y_base, size=R*R*C).reshape(R, R, C)
 l2_ref = l2.numpy().reshape(R, R, C)
 m.print_rel_err(l2_asm, l2_ref)
@@ -187,11 +185,10 @@ C = 8
 F = 2*C
 y_base = a4_base
 
-# run assembly
 conv_1x1(m, C, F, R, a_base=a3_base, w_base=w3_base, y_base=y_base,
          code_start=code_start)
 
-# compare results against expected
+# compare results against keras
 l3_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R, R, F)
 l3_ref = l3.numpy().reshape(R, R, F)
 m.print_rel_err(l3_asm, l3_ref)

@@ -154,6 +154,8 @@ w = np.random.normal(size=(3, 3, C)).astype(np.float32)
 y_k = DepthwiseConv2D(3, padding='same', depthwise_initializer=constant(w))(a)
 y = y_k.numpy().reshape(R, R, C)  # flatten
 
+# TODO: add stride = 2 here
+
 #-------------------------------------------------------------------------------
 # run assembly and compare
 m.clear_mem()
@@ -178,23 +180,28 @@ y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*C).reshape(C, R, R), axes=[
 m.print_rel_err(y_asm, y)
 
 #-------------------------------------------------------------------------------
-# Example 4: Conv2D 3x3, 3 in-channels, 8 out-channels, 12x12 image, stride=1
+# Example 4: Conv2D 3x3, 3 in-channels, 8 out-channels, 12x12 image, stride=1,2
 #-------------------------------------------------------------------------------
-print('-------------- Example 4: Conv2D 3x3 layer, stride=1 ------------------')
+print('-------------- Example 4: Conv2D 3x3 layer, stride=1,2 ----------------')
 F = 8   # output-channels
 R = 12  # image resolution
+Q = R//2  # output resolution for stride 2 only
 
 #-------------------------------------------------------------------------------
 # generate activations and weights, run inference
 a = np.random.normal(size=(1, R, R, 3)).astype(np.float32)
 w = np.random.normal(size=(3, 3, 3, F)).astype(np.float32)
 # input shape:  (1, R, R, 3) : batch-size, RxR image, channels
-# output shape: (1, R, R, F) : batch-size, RxR image, channels
 # kernel shape: (3, 3, 3, F) : 3x3 kernel, in-channels, out-channels
+# output shape for stride=1: (1, R, R, F) : batch-size, RxR image, channels
+# output shape for stride=2: (1, Q, Q, F) : batch-size, QxQ image, channels
 
-# run inference with keras (golden reference)
-y_k = Conv2D(F, 3, padding='same', kernel_initializer=constant(w))(a)
-y = y_k.numpy().reshape(R, R, F)
+# run inference with keras (golden reference) for strides 1 and 2:
+# y1 refers to stride=1; y2 refers to stride=2
+y1_k = Conv2D(F, 3, padding='same', kernel_initializer=constant(w))(a)
+y2_k = Conv2D(F, 3, padding='same', strides=2, kernel_initializer=constant(w))(a)
+y1 = y1_k.numpy().reshape(R, R, F)
+y2 = y2_k.numpy().reshape(Q, Q, F)
 
 #-------------------------------------------------------------------------------
 # run assembly and compare
@@ -204,56 +211,18 @@ m.clear_cpu()
 # write to memory
 a_base = 0
 w_base = a.size * 4
-y_base = (a.size + w.size) * 4
+y1_base = (a.size + w.size) * 4  # y_base for stride=1
+y2_base = y1_base + F*R*R * 4    # y_base for stride=2
 m.write_f32_vec(a.flatten(), a_base)
 m.write_f32_vec(np.transpose(w, axes=[3, 0, 1, 2]).flatten(), w_base)
 # transpose W so that the output-channels is first axes
 
-# run assembly code
-conv_3x3x3_stride1(m, F, R, a_base, w_base, y_base)
+# run assembly code for strides 1 and 2
+conv_3x3x3_stride1(m, F, R, a_base, w_base, y1_base)
+conv_3x3x3_stride2(m, F, R, a_base, w_base, y2_base)
 
 # compare results against expected
-y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R, R), axes=[1, 2, 0])
-m.print_rel_err(y_asm, y)
-
-#-------------------------------------------------------------------------------
-# Example 5: Conv2D 3x3, 3 in-channels, 8 out-channels, 12x12 image, stride=2
-#-------------------------------------------------------------------------------
-print('-------------- Example 5: Conv2D 3x3 layer, stride=2 ------------------')
-F = 8     # output-channels
-R = 12    # input resolution
-Q = R//2  # output resolution
-
-#-------------------------------------------------------------------------------
-# generate activations and weights, run inference
-a = np.random.normal(size=(1, R, R, 3)).astype(np.float32)
-w = np.random.normal(size=(3, 3, 3, F)).astype(np.float32)
-# input shape:  (1, R, R, 3) : batch-size, RxR image, channels
-# output shape: (1, Q, Q, F) : batch-size, QxQ image, channels
-# kernel shape: (3, 3, 3, F) : 3x3 kernel, in-channels, out-channels
-
-# run inference with keras (golden reference)
-y_k = Conv2D(F, 3, padding='same', strides=2, kernel_initializer=constant(w))(a)
-y = y_k.numpy().reshape(Q, Q, F)
-
-# keras does the striding as follows: the first valid output equals the
-# [1, 1] output of the non-strided version, etc.
-
-#-------------------------------------------------------------------------------
-# run assembly and compare
-m.clear_mem()
-m.clear_cpu()
-
-# write to memory
-a_base = 0
-w_base = a.size * 4
-y_base = (a.size + w.size) * 4
-m.write_f32_vec(a.flatten(), a_base)
-m.write_f32_vec(np.transpose(w, axes=[3, 0, 1, 2]).flatten(), w_base)
-# transpose W so that the output-channel is first axes
-
-# run assembly code
-conv_3x3x3_stride2(m, F, R, a_base, w_base, y_base)
-
-y_asm = np.transpose(m.read_f32_vec(y_base, size=Q*Q*F).reshape(F, Q, Q), axes=[1, 2, 0])
-m.print_rel_err(y_asm, y)
+y1_asm = np.transpose(m.read_f32_vec(y1_base, size=R*R*F).reshape(F, R, R), axes=[1, 2, 0])
+y2_asm = np.transpose(m.read_f32_vec(y2_base, size=Q*Q*F).reshape(F, Q, Q), axes=[1, 2, 0])
+m.print_rel_err(y1_asm, y1)
+m.print_rel_err(y2_asm, y2)

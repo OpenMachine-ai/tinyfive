@@ -85,8 +85,6 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start):
   #  - clean up the indexing and base address pointers
   #  - use mnemonics x9 and f9 etc. instead of '9'
   #  - rewrite above using only upper-case instructions to speed up runtime
-  #  - parameterize the assembly code and put it in a def so that it can be used
-  #    for other shapes, too
 
 #-------------------------------------------------------------------------------
 # Depthwise Conv2D 3x3 with C channels, RxR image, stride=1
@@ -160,7 +158,6 @@ def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base, out_chan_first=True):
       m.ADDI(12, 12, R*R*4)  # for Y(chan)
 
     # TODOs:
-    #  - parameterize above and eventually move into a def
     #  - add example for stride=2
     #  - reduce number of loads by computing several outputs in parallel (each output
     #    requires three registers for stride=1, so here we could compute 6 outputs in
@@ -194,7 +191,7 @@ def conv_3x3x3_stride1(m, F, R, a_base, w_base, y_base):
         for k in range(3):  # 'k' is input-channel
           m.FLW_S(9*i+3*j+k, (9*i+3*j+k)*4, 11)  # f[i, j, k] = W[i, j, k, chan]
 
-    # compute all outputs (6x6) for channel 'chan'
+    # compute all outputs (RxR) for channel 'chan'
     for row in range(R):
       for col in range(R):
         # load 3*3 activations, perform 27 muls, and store 1 output
@@ -233,6 +230,8 @@ def conv_3x3x3_stride1(m, F, R, a_base, w_base, y_base):
 def conv_3x3x3_stride2(m, F, R, a_base, w_base, y_base):
   """assembly code with upper-case instruction for conv2D 3x3 with 3 in-channels,
   F out-channels, stride = 2, R input resolution, and R/2 output resolution.
+  Note on stride=2: keras does the striding as follows: the first valid output
+  equals the [1, 1] output of the non-strided version, etc.
   Register map:
     x[10] : base address for A[chan]
     x[11] : base address for W[chan]
