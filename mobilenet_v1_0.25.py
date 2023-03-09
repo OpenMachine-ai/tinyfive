@@ -10,7 +10,7 @@ from machine import machine
 from layers import *
 
 np.random.seed(5)  # fix seed for reproducible results
-m = machine(mem_size=6000000)  # instantiate RISC-V machine with 6MB of memory
+m = machine(mem_size=10000000)  # instantiate RISC-V machine with 10MB of memory
 # TODO: reduce to 500KB once we use branches to reduce image size
 
 #-------------------------------------------------------------------------------
@@ -96,8 +96,6 @@ l13 = Conv2D(128, 1, kernel_initializer=constant(w13))(l12)
 
 l14 = DepthwiseConv2D(3, padding='same', depthwise_initializer=constant(w14))(l13)
 
-print(l14.numpy().shape)
-
 # TODOs:
 #  - replace above by keras sequence (or import a reference model from HuggingFace or Keras)
 #  - use for-loops (for i range(30)) for these 29 layers to clean up the code
@@ -139,7 +137,8 @@ a12_base = l10.numpy().size * 4 + a11_base
 a13_base = l11.numpy().size * 4 + a12_base
 a14_base = l12.numpy().size * 4 + a13_base
 # TODO: add more layers and update below
-out_base   = l13.numpy().size * 4 + a14_base
+out_base = l13.numpy().size * 4 + a14_base
+a15_base = out_base
 code_start = l14.numpy().size * 4 + out_base
 
 m.write_f32_vec(np.transpose( w1, axes=[3, 0, 1, 2]).flatten(), w1_base)
@@ -159,110 +158,93 @@ m.write_f32_vec(np.transpose(w14, axes=[2, 0, 1]).flatten(), w14_base)
 
 m.write_f32_vec(inp.flatten(), a1_base)
 
-# abbreviations for shape dimensions:
-#   C : input channels (and output channels if the same as input channels)
-#   F : output channels (or filters), only used if F is not the same as C
-#   R : input resolution (and output resolution if the same as input).
-#   Q : output resolution, only used if Q is not the same as R
+#-------------------------------------------------------------------------------
+# run assembly code and compare with keras
+#-------------------------------------------------------------------------------
+def compare_cpu_vs_ref(m, C, R, y_base, ref, transpose=False):
+  """compare CPU machine versus reference (Keras, PyTorch)"""
+  if transpose==False:
+    cpu = m.read_f32_vec(y_base, size=R*R*C).reshape(R, R, C)
+  else:
+    cpu = np.transpose(m.read_f32_vec(y_base, size=R*R*C).reshape(C, R, R), axes=[1, 2, 0])
+  m.print_rel_err(cpu, ref.numpy().reshape(R, R, C))
 
 #-------------------------------------------------------------------------------
-# layer 1: Conv2D 3x3, 3 in-channels, 8 out-channels, 96x96 resolution, stride=2
-#-------------------------------------------------------------------------------
-F = 8
-R = 96
-Q = R//2
-y_base = a2_base
+# layers 1, 2, 3
+conv_3x3x3_stride2( m, 8, 96, a1_base, w1_base, a2_base)
+dw_conv_3x3_stride1(m, 8, 48, a2_base, w2_base, a3_base, out_chan_first=False)
+conv_1x1(       m, 8, 16, 48, a3_base, w3_base, a4_base, code_start=code_start)
 
-conv_3x3x3_stride2(m, F, R, a_base=a1_base, w_base=w1_base, y_base=a2_base)
-
-# compare results against keras
-l1_asm = np.transpose(m.read_f32_vec(y_base, size=Q*Q*8).reshape(F, Q, Q), axes=[1, 2, 0])
-l1_ref = l1.numpy().reshape(Q, Q, F)
-m.print_rel_err(l1_asm, l1_ref)
-
-#-------------------------------------------------------------------------------
-# layer 2: Depthwise Conv2D 3x3, 8 channels, 48x48 resolution, stride=1
-#-------------------------------------------------------------------------------
-R = 48
-C = 8
-y_base = a3_base
-
-dw_conv_3x3_stride1(m, C, R, a_base=a2_base, w_base=w2_base, y_base=y_base,
-                    out_chan_first=False)
-# Note: set out_chan_first=False so that output is shape (R, R, C)
-
-# compare results against keras
-l2_asm = m.read_f32_vec(y_base, size=R*R*C).reshape(R, R, C)
-l2_ref = l2.numpy().reshape(R, R, C)
-m.print_rel_err(l2_asm, l2_ref)
-
-#-------------------------------------------------------------------------------
-# layer 3: Conv2D 1x1, 8 in-channels, 16 out-channels, 48x48 resolution
-#-------------------------------------------------------------------------------
-R = 48
-C = 8
-F = 2*C
-y_base = a4_base
-
-conv_1x1(m, C, F, R, a_base=a3_base, w_base=w3_base, y_base=y_base,
-         code_start=code_start)
-
-# compare results against keras
-l3_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R, R, F)
-l3_ref = l3.numpy().reshape(R, R, F)
-m.print_rel_err(l3_asm, l3_ref)
-
-#-------------------------------------------------------------------------------
-# layer 4: Depthwise Conv2D 3x3, 16 channels, 48x48 resolution, stride=2
-#-------------------------------------------------------------------------------
-R = 48
-Q = R//2
-C = 16
-y_base = a5_base
+compare_cpu_vs_ref(m,  8, 48, a2_base, l1, transpose=True)
+compare_cpu_vs_ref(m,  8, 48, a3_base, l2)
+compare_cpu_vs_ref(m, 16, 48, a4_base, l3)
 
 # TODO: remove below hack, temp hack to transpose the input activations
-l3_hack = np.transpose(l3_asm, axes=[2, 0, 1])
+l3_hack = np.transpose(m.read_f32_vec(a4_base, size=48*48*16).reshape(48, 48, 16), axes=[2, 0, 1])
 m.write_f32_vec(l3_hack.flatten(), a4_base)
 
-dw_conv_3x3_stride2(m, C, R, a_base=a4_base, w_base=w4_base, y_base=y_base,
-                    out_chan_first=False)
-
-# compare results against keras
-l4_asm = m.read_f32_vec(y_base, size=Q*Q*C).reshape(Q, Q, C)
-l4_ref = l4.numpy().reshape(Q, Q, C)
-m.print_rel_err(l4_asm, l4_ref)
-
 #-------------------------------------------------------------------------------
-# layer 5: Conv2D 1x1, 16 in-channels, 32 out-channels, 24x24 resolution
-#-------------------------------------------------------------------------------
-R = 24
-C = 16
-F = 2*C
-y_base = a6_base
+# layers 4, 5
+dw_conv_3x3_stride2(m, 16, 48, a4_base, w4_base, a5_base, out_chan_first=False)
+conv_1x1(       m, 16, 32, 24, a5_base, w5_base, a6_base, code_start=code_start)
 
-conv_1x1(m, C, F, R, a_base=a5_base, w_base=w5_base, y_base=y_base,
-         code_start=code_start)
-
-# compare results against keras
-l5_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R, R, F)
-l5_ref = l5.numpy().reshape(R, R, F)
-m.print_rel_err(l5_asm, l5_ref)
-
-#-------------------------------------------------------------------------------
-# layer 6: Depthwise Conv2D 3x3, 32 channels, 24x24 resolution, stride=1
-#-------------------------------------------------------------------------------
-R = 24
-C = 32
-y_base = a7_base
+compare_cpu_vs_ref(m, 16, 24, a5_base, l4)
+compare_cpu_vs_ref(m, 32, 24, a6_base, l5)
 
 # TODO: remove below hack, temp hack to transpose the input activations
-l5_hack = np.transpose(l5_asm, axes=[2, 0, 1])
+l5_hack = np.transpose(m.read_f32_vec(a6_base, size=24*24*32).reshape(24, 24, 32), axes=[2, 0, 1])
 m.write_f32_vec(l5_hack.flatten(), a6_base)
 
-dw_conv_3x3_stride1(m, C, R, a_base=a6_base, w_base=w6_base, y_base=y_base,
-                    out_chan_first=False)
+#-------------------------------------------------------------------------------
+# layers 6, 7
+dw_conv_3x3_stride1(m, 32, 24, a6_base, w6_base, a7_base, out_chan_first=False)
+conv_1x1(       m, 32, 32, 24, a7_base, w7_base, a8_base, code_start=code_start)
 
-# compare results against keras
-l6_asm = m.read_f32_vec(y_base, size=R*R*C).reshape(R, R, C)
-l6_ref = l6.numpy().reshape(R, R, C)
-m.print_rel_err(l6_asm, l6_ref)
+compare_cpu_vs_ref(m, 32, 24, a7_base, l6)
+compare_cpu_vs_ref(m, 32, 24, a8_base, l7)
+
+# TODO: remove below hack, temp hack to transpose the input activations
+l7_hack = np.transpose(m.read_f32_vec(a8_base, size=24*24*32).reshape(24, 24, 32), axes=[2, 0, 1])
+m.write_f32_vec(l7_hack.flatten(), a8_base)
+
+#-------------------------------------------------------------------------------
+# layers 8, 9
+dw_conv_3x3_stride2(m, 32, 24, a8_base, w8_base, a9_base, out_chan_first=False)
+conv_1x1(       m, 32, 64, 24, a9_base, w9_base, a10_base, code_start=code_start)
+
+compare_cpu_vs_ref(m, 32, 12,  a9_base, l8)
+compare_cpu_vs_ref(m, 64, 12, a10_base, l9)
+
+# TODO: remove below hack, temp hack to transpose the input activations
+l9_hack = np.transpose(m.read_f32_vec(a10_base, size=12*12*64).reshape(12, 12, 64), axes=[2, 0, 1])
+m.write_f32_vec(l9_hack.flatten(), a10_base)
+
+#-------------------------------------------------------------------------------
+# layers 10, 11
+dw_conv_3x3_stride1(m, 64, 12, a10_base, w10_base, a11_base, out_chan_first=False)
+conv_1x1(       m, 64, 64, 12, a11_base, w11_base, a12_base, code_start=code_start)
+
+compare_cpu_vs_ref(m, 64, 12, a11_base, l10)
+compare_cpu_vs_ref(m, 64, 12, a12_base, l11)
+
+# TODO: remove below hack, temp hack to transpose the input activations
+l11_hack = np.transpose(m.read_f32_vec(a12_base, size=12*12*64).reshape(12, 12, 64), axes=[2, 0, 1])
+m.write_f32_vec(l11_hack.flatten(), a12_base)
+
+#-------------------------------------------------------------------------------
+# layers 12, 13
+dw_conv_3x3_stride2(m, 64, 12, a12_base, w12_base, a13_base, out_chan_first=False)
+conv_1x1(      m, 64, 128,  6, a13_base, w13_base, a14_base, code_start=code_start)
+
+compare_cpu_vs_ref(m,  64, 6, a13_base, l12)
+compare_cpu_vs_ref(m, 128, 6, a14_base, l13)
+
+# TODO: remove below hack, temp hack to transpose the input activations
+l13_hack = np.transpose(m.read_f32_vec(a14_base, size=6*6*128).reshape(6, 6, 128), axes=[2, 0, 1])
+m.write_f32_vec(l13_hack.flatten(), a14_base)
+
+#-------------------------------------------------------------------------------
+# layer 14
+dw_conv_3x3_stride1(m, 128, 6, a14_base, w14_base, a15_base, out_chan_first=False)
+
+compare_cpu_vs_ref(m, 128, 6, a15_base, l14)
