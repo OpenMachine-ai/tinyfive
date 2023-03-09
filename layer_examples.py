@@ -137,24 +137,27 @@ y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)  # read result matrix
 m.print_rel_err(y_asm, y)
 
 #-------------------------------------------------------------------------------
-# Example 3: Depthwise Conv2D 3x3 with 4 channels, stride=1, 6x6 image
+# Example 3: Depthwise Conv2D 3x3 with 4 channels, stride=1,2, 6x6 image
 #-------------------------------------------------------------------------------
-print('-------------- Example 3: Depthwise Conv2D 3x3 layer ------------------')
+print('-------------- Example 3: Depthwise Conv2D 3x3 layer, stride=1,2 ------')
 C = 4  # channels
 R = 6  # resolution
+Q = R//2  # output resolution for stride 2 only
 
 #-------------------------------------------------------------------------------
 # generate activations and weights, run inference
 a = np.random.normal(size=(1, R, R, C)).astype(np.float32)
 w = np.random.normal(size=(3, 3, C)).astype(np.float32)
 # activation shape: (1, R, R, C) : batch-size, RxR image, channels
+# output shape for stride=2: (1, Q, Q, C) : batch-size, QxQ image, channels
 # kernel shape: (3, 3, C) : 3x3 kernel, channels
 
-# run inference with keras (golden reference)
-y_k = DepthwiseConv2D(3, padding='same', depthwise_initializer=constant(w))(a)
-y = y_k.numpy().reshape(R, R, C)  # flatten
-
-# TODO: add stride = 2 here
+# run inference with keras (golden reference) for strides 1 and 2:
+# y1 refers to stride=1; y2 refers to stride=2
+y1_k = DepthwiseConv2D(3, padding='same', depthwise_initializer=constant(w))(a)
+y2_k = DepthwiseConv2D(3, padding='same', strides=2, depthwise_initializer=constant(w))(a)
+y1 = y1_k.numpy().reshape(R, R, C)  # flatten
+y2 = y2_k.numpy().reshape(Q, Q, C)  # flatten
 
 #-------------------------------------------------------------------------------
 # run assembly and compare
@@ -162,9 +165,11 @@ m.clear_mem()
 m.clear_cpu()
 
 # write A and W to memory
-a_base = 0
-w_base = a_base + R*R*C *4
-y_base = w_base + 3*3*C *4
+a_base  = 0
+w_base  = a_base  + R*R*C *4
+y1_base = w_base  + 3*3*C *4  # y_base for stride=1
+y2_base = y1_base + R*R*C *4  # y_base for stride=2
+
 m.write_f32_vec(np.transpose(a, axes=[3, 0, 1, 2]).flatten(), a_base)
 m.write_f32_vec(np.transpose(w, axes=[2, 0, 1]).flatten(), w_base)
 # note on the transpose in the last two lines: We rearrange the matrices so
@@ -172,12 +177,23 @@ m.write_f32_vec(np.transpose(w, axes=[2, 0, 1]).flatten(), w_base)
 # That's important so that when we flatten it in row-major, all the pixels of the
 # first channel are contigously in memory, because we process one channel at a time
 
-# run assembly code
-dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base)
+# run assembly code for strides 1 and 2
+dw_conv_3x3_stride1(m, C, R, a_base, w_base, y1_base)
+dw_conv_3x3_stride2(m, C, R, a_base, w_base, y2_base)
 
-# compare results against expected Y
-y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*C).reshape(C, R, R), axes=[1, 2, 0])
-m.print_rel_err(y_asm, y)
+# compare results against keras
+y1_asm = np.transpose(m.read_f32_vec(y1_base, size=R*R*C).reshape(C, R, R), axes=[1, 2, 0])
+y2_asm = np.transpose(m.read_f32_vec(y2_base, size=Q*Q*C).reshape(C, Q, Q), axes=[1, 2, 0])
+m.print_rel_err(y1_asm, y1)
+m.print_rel_err(y2_asm, y2)
+
+# now rerun both cases with 'out_chan_first=False' and compare against previous runs
+dw_conv_3x3_stride1(m, C, R, a_base, w_base, y1_base, out_chan_first=False)
+dw_conv_3x3_stride2(m, C, R, a_base, w_base, y2_base, out_chan_first=False)
+y1_asm_t = m.read_f32_vec(y1_base, size=R*R*C).reshape(R, R, C)
+y2_asm_t = m.read_f32_vec(y2_base, size=Q*Q*C).reshape(Q, Q, C)
+m.print_rel_err(y1_asm_t, y1_asm)
+m.print_rel_err(y2_asm_t, y2_asm)
 
 #-------------------------------------------------------------------------------
 # Example 4: Conv2D 3x3, 3 in-channels, 8 out-channels, 12x12 image, stride=1,2

@@ -158,10 +158,83 @@ def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base, out_chan_first=True):
       m.ADDI(12, 12, R*R*4)  # for Y(chan)
 
     # TODOs:
-    #  - add example for stride=2
     #  - reduce number of loads by computing several outputs in parallel (each output
     #    requires three registers for stride=1, so here we could compute 6 outputs in
     #    parallel; and when image-size is 6x6, process an entire column in parallel)
+
+#-------------------------------------------------------------------------------
+# Depthwise Conv2D 3x3 with C channels, RxR input image, stride=2
+#-------------------------------------------------------------------------------
+def dw_conv_3x3_stride2(m, C, R, a_base, w_base, y_base, out_chan_first=True):
+  """assembly code with upper-case instruction for depthwise conv2D 3x3 with
+  C channels, R input resolution, stride = 2 (so output resolution is Q = R/2).
+  If out_chan_first==True, then the output shape is (channel, row, col);
+  otherwise shape is (row, col, channel)
+  Register map:
+    x[10] : base address for A[chan]
+    x[11] : base address for W[chan]
+    x[12] : base address for Y[chan]
+    f[0] .. f[8]: the 9 weights of a channel, stored in row-major order
+    f[9]  : holds the latest activation loaded from memory
+    f[10] : accumulation register 'out0' for current output
+    f[11] : accumulation register 'out1' for next output"""
+
+  # init base addresses
+  Q = R//2  # output resolution
+  m.LI(10, a_base)
+  m.LI(11, w_base)
+  if out_chan_first:
+    m.LI(12, y_base)
+
+  for chan in range(C):
+    if out_chan_first==False:
+        m.LI(12, y_base)
+
+    # load 3x3 weights for channel 'chan'
+    for i in range(3):
+      for j in range(3):
+        m.FLW_S(3*i+j, (3*i + j)*4, 11)  # f[i, j] = W[chan, i, j]
+
+    # compute all outputs (QxQ) for channel 'chan'
+    for row in range(1, R, 2):
+      for col in range(R):
+        # load 3 activations, perform 9 muls, and store 1 output
+        for dot in range(0, 3 if row < R-1 else 2):  # last row is special
+          # load one activation from memory
+          m.FLW_S(9, (R*(row-1+dot) + col)*4, 10)  # A[chan, row-1+dot, col]
+
+          # compute 3 muls with weights W[dot, 0:3]
+          if (col % 2) == 0:  # even columns
+            if col > 0:
+              m.FMADD_S(10, 9, 3*dot+2, 10)  # f10 += f9 * W[dot, 2]
+            if dot == 0:
+              m.FMUL_S(11, 9, 3*dot)         # f11  = f9 * W[dot, 0]
+            else:
+              m.FMADD_S(11, 9, 3*dot, 11)  # f11 += f9 * W[dot, 0]
+          else:  # odd columns
+            if dot == 0:
+              m.FMADD_S(10, 9, 3*dot+1, 11)    # f10  = f9 * W[dot, 1] + f11
+            else:
+               m.FMADD_S(10, 9, 3*dot+1, 10)  # f10 += f9 * W[dot, 1]
+        # store result
+        if out_chan_first:
+          if col > 0 and (col % 2) == 0:
+            m.FSW_S(10, (Q*(row-1)//2 + (col-2)//2)*4, 12)  # Y[chan, (row-1)/2, (col-2)/2]
+          if (col == R-1):
+            m.FSW_S(10, (Q*(row-1)//2 + (col-1)//2)*4, 12)  # Y[chan, (row-1)/2, (col-1)/2]
+        else:
+          if col > 0 and (col % 2) == 0:
+            m.FSW_S(10, (C*(col-2)//2 + chan)*4, 12)  # Y[(row-1)/2, (col-2)/2, chan]
+          if (col == R-1):
+            m.FSW_S(10, (C*(col-1)//2 + chan)*4, 12)  # Y[(row-1)/2, (col-1)/2, chan]
+      if out_chan_first==False:
+        m.ADDI(12, 12, C*Q*4)  # for Y(chan)
+
+    # increment base addresses
+    m.ADDI(11, 11, 9*4)    # for W(chan)
+    m.ADDI(10, 10, R*R*4)  # for A(chan)
+    if out_chan_first:
+      m.ADDI(12, 12, Q*Q*4)  # for Y(chan)
 
 #-------------------------------------------------------------------------------
 # Conv2D 3x3 with 3 in-channels, F out-channels, RxR image, stride=1
@@ -242,10 +315,10 @@ def conv_3x3x3_stride2(m, F, R, a_base, w_base, y_base):
     f[29] : accumulation register 'out1' for next output"""
 
   # init base addresses
+  Q = R//2  # output resolution
   m.LI(10, a_base)
   m.LI(11, w_base)
   m.LI(12, y_base)
-  Q = R//2  # output resolution
 
   for chan in range(F): # 'chan' refers to 'output-channel'
     # load 3x3x3 weights for output-channel 'chan'
