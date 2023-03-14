@@ -104,6 +104,11 @@ class machine:
 
   # the 3 missing instructions FENCE, ECALL, EBREAK are not needed here
 
+  # TODO: when using the above uppercase instructions, then there is no check if
+  # an immediate exceeds the 12-bit limit. Therefore, consider replacing 'imm'
+  # by 'ci(imm)', where ci() is a def that raises an error flag if the immediate
+  # exceeds the 12-bit limit.
+
   #-------------------------------------------------------------------------------
   # M-extension (RV32M)
   def muls(s,a,b): return np.multiply(    a,      b,  dtype=np.int64)

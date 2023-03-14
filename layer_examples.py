@@ -10,7 +10,7 @@ from machine import machine
 from layers import *
 
 np.random.seed(5)  # fix seed for reproducible results
-m = machine(mem_size=2000000)  # instantiate RISC-V machine with 2MB of memory
+m = machine(mem_size=10000000)  # instantiate RISC-V machine with 10MB of memory
 # TODO: reduce to 500KB once we use branches to reduce image size
 
 # abbreviations for shape dimensions:
@@ -99,24 +99,30 @@ m.print_rel_err(np.matmul(a, w), y)  # compare matmul vs. keras conv2D
 
 #-------------------------------------------------------------------------------
 # proof of concept: split W and A into 4x4 submatrices, then compute matmul(A, W)
-a_split = np.empty((R*R//4, C//4, 4, 4))
+# specifically, divide W into 4x4 submatrices and A into Sx4 submatrices, where S
+# could be 4 or 3 (this is to support cases where R*R is divisible by 4 or 3)
+
+# TODO: move proof of concept to layers.py
+
+S = 4
+a_split = np.empty((R*R//S, C//4, S, 4))
 w_split = np.empty((C//4, F//4, 4, 4))
 for i in range(C//4):
   for j in range(F//4):
     w_split[i, j] = w[i*4:i*4+4, j*4:j*4+4]
-for i in range(R*R//4):
+for i in range(R*R//S):
   for j in range(C//4):
-    a_split[i, j] = a[i*4:i*4+4, j*4:j*4+4]
+    a_split[i, j] = a[i*S:i*S+S, j*4:j*4+4]
 # compute the big matmul by smaller 4x4 matmuls
 y_con = np.zeros((R*R, F))
-for i in range(R*R//4):
+for i in range(R*R//S):
   for j in range(F//4):
     for k in range(C//4):
-      y_con[4*i:4*i+4, 4*j:4*j+4] += np.matmul(a_split[i, k], w_split[k, j])
+      y_con[S*i:S*i+S, 4*j:4*j+4] += np.matmul(a_split[i, k], w_split[k, j])
 m.print_rel_err(y_con, y)  # compare y_con against Y
 
 #-------------------------------------------------------------------------------
-# run assembly and compare
+# run assembly and compare for various implementations
 m.clear_mem()
 m.clear_cpu()
 
@@ -128,12 +134,25 @@ code_start = y_base + R*R*F * 4
 m.write_f32_vec(a.flatten(), a_base)  # write A to mem[a_base]
 m.write_f32_vec(w.flatten(), w_base)  # write W to mem[w_base]
 
-# run assembly
+# S=4, trans=False
 conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start)
-m.print_perf()
+y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)
+m.print_rel_err(y_asm, y)
+#m.print_perf()
 
-# compare results against expected Y
-y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)  # read result matrix
+# S=3, trans=False
+conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, S=3)
+y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)
+m.print_rel_err(y_asm, y)
+
+# S=4, trans=True
+conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=True)
+y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R*R), axes=[1, 0])
+m.print_rel_err(y_asm, y)
+
+# S=4, but use conv_1x1_big
+conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start)
+y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)
 m.print_rel_err(y_asm, y)
 
 #-------------------------------------------------------------------------------

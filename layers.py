@@ -14,66 +14,70 @@ from machine import machine
 #-------------------------------------------------------------------------------
 # Conv2D 1x1 with C in-channels, F out-channels, RxR image resolution
 #-------------------------------------------------------------------------------
-def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start):
-  """assembly code with for conv2D 1x1 with F in-channels, F out-channels,
-  and resolution R.
+def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
+  """assembly code for conv2D 1x1, F in-channels, F out-channels, resolution R.
+  C and F can be up to 128 (because immediates are limited to 12-bit). If trans
+  is True, then the output is written into memory in transposed form. S should
+  be set to 4 if R*R is divisible by 4. Otherwise, if R*R is divisible by 3,
+  then set S to 3, other R values are currently not supported.
   Register map:
-    x[9]  : 1st base address for A
-    x[10] : 2nd base address for A
-    x[11] : base address for W
-    x[12] : base address for results Y
-    f[11] : to store elements of A
-    f[12] .. f[15]: 4 registers to store an entire row of W
-    f[16] .. f[31]: the 16 outputs res[0, 0] ... res[4, 4]"""
+    x8  : constant for incrementing x11  (only needed for F >= 128)
+    x9  : 1st base address for A
+    x10 : 2nd base address for A
+    x11 : base address for W
+    x12 : base address for results Y
+    f11 : to store elements of A
+    f12 .. f15: 4 registers to store an entire row of W
+    f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]. Note, if S=3, then
+                only 12 of these 16 registers are used."""
 
   # store assembly program starting at address 'code_start'
   m.pc = code_start
   m.lbl('start')
 
-  # matmul (R*R, C) x (C, F) -> (R*R, F)
-  for i in range(R*R//4):
-    m.asm('lui',  9,      m.hi20(a_base + 4*C*4*i))  # m.x[9] =  ...
-    m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*4*i))
-    m.asm('lui',  12,     m.hi20(y_base + 4*F*4*i))  # m.x[12] = ...
-    m.asm('addi', 12, 12, m.lo12(y_base + 4*F*4*i))
+  # only needed if 4*4*F >= 2048 (i.e. for F = 128)
+  m.asm('lui',  8,    m.hi20(4*4*F))
+  m.asm('addi', 8, 8, m.lo12(4*4*F))
 
-    # matmul (4, C) x (C, F) -> (4, F)
+  # matmul (R*R, C) x (C, F) -> (R*R, F)
+  for i in range(R*R//S):  # S is 4 or 3
+    m.asm('lui',  9,      m.hi20(a_base + 4*C*S*i))  # x9 =  ...
+    m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i))
+    m.asm('lui',  12,     m.hi20(y_base + (4*4*i if trans else 4*F*S*i)))
+    m.asm('addi', 12, 12, m.lo12(y_base + (4*4*i if trans else 4*F*S*i)))
+
+    # matmul (S, C) x (C, F) -> (S, F)
     for j in range(F//4):
       # set base address pointers
-      m.asm('add', 10, 9, 0) # reset A pointer to x[9]
-      m.asm('lui',  11,     m.hi20(w_base + 16*j))  # m.x[11] = w_base + 16*j
+      m.asm('add', 10, 9, 0) # reset A pointer to x9
+      m.asm('lui',  11,     m.hi20(w_base + 16*j))  # x11 = w_base + 16*j
       m.asm('addi', 11, 11, m.lo12(w_base + 16*j))
 
-      # matmul (4, C) x (C, 4) -> (4, 4)
+      # matmul (S, C) x (C, 4) -> (S, 4)
       for k in range(C//4):
-        # compute one 4x4 matmul (by computing 4 outer products)
+        # compute one Sx4 matmul (by computing 4 outer products)
         for ii in range(4):
-          # load row ii of W into registers f[12] ... f[15]
+          # load row ii of W into registers f12 ... f15
           for col in range(4):
             m.asm('flw.s', 12+col, 4*(col+F*ii), 11)
           # compute outer-product in row-major order
-          for row in range(4):
-            m.asm('flw.s', 11, 4*(C*row+ii), 10)  # load f[11] with A[row, ii]
+          for row in range(S):
+            m.asm('flw.s', 11, 4*(C*row+ii), 10)  # load f11 with A[row, ii]
             for col in range(4):
               if ii==0 and k==0:  # no accumulation for the very first products
-                m.asm('fmul.s', 16+4*row+col, 11, 12+col)  # f[] = f[11] * f[12]
+                m.asm('fmul.s', 16+4*row+col, 11, 12+col)  # f[] = f11 * f12
               else:
-                m.asm('fmadd.s', 16+4*row+col, 11, 12+col, 16+4*row+col) # f[] += f[11] * f[12]
+                m.asm('fmadd.s', 16+4*row+col, 11, 12+col, 16+4*row+col) # f[] += f11 * f12
 
         # increment base addresses for A and W
-        m.asm('addi', 10, 10, 4*4)  # increment by 16
-        m.asm('addi', 11, 11, 4*4*F//2)  # increment by 4*4*F by two times 4*4*F/2
-        m.asm('addi', 11, 11, 4*4*F//2)
-        # note on the last two lines: 12-bit immediates: -2048 .. +2047. So we increment
-        # by 1024 two times to achieve 2048 increment. Alternatively, we could decrement
-        # the index (because -2048 is possible in one instruction). Or store the W-matrix
-        # in transposed form
+        m.asm('addi', 10, 10, 4*4)  # increment x10 by 16
+        m.asm('add', 11, 11, 8)     # increment x11
 
       # store results in memory
-      for row in range(4):
+      for row in range(S):
         for col in range(4):
-          m.asm('fsw.s', 16+4*row+col, 4*(row*F+col), 12)
-      m.asm('addi', 12, 12, 4*4)  # increment Y pointer by 16
+          m.asm('fsw.s', 16+4*row+col, 4*(col*R*R+row) if trans else 4*(row*F+col), 12)
+      m.asm('addi', 12, 12, 4*4*R*R if trans else 4*4)  # increment Y pointer
   m.lbl('end')
 
   # execute program from 'start' to 'end'
@@ -85,6 +89,87 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start):
   #  - clean up the indexing and base address pointers
   #  - use mnemonics x9 and f9 etc. instead of '9'
   #  - rewrite above using only upper-case instructions to speed up runtime
+  # note on the 12-bit immediates: -2048 .. +2047. For weights, we could store
+  # the W-matrix in transposed form, which gives us a bit more indexing room
+
+#-------------------------------------------------------------------------------
+# Same as conv_1x1 but with support of C,F > 128
+#-------------------------------------------------------------------------------
+def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, S=4):
+  """same as conv_1x1, but for C,F > 128 (up to 256 for now).
+  Register map:
+    x7  : constant for incrementing x12 and x13 (only needed for F >= 128)
+    x8,  x9  : 1st base address registers for A
+    x10, x11 : 2nd base address registers for A
+    x12, x13 : 2 base address registers for W (due to 12-bit limit)
+    x14 .. x17 : 4 base address registers for results Y, one for each row
+    f11 : to store elements of A
+    f12 .. f15: 4 registers to store an entire row of W
+    f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]"""
+
+  # store assembly program starting at address 'code_start'
+  m.pc = code_start
+  m.lbl('start')
+
+  # only needed if 4*4*F >= 2048 (i.e. for F = 128)
+  m.asm('lui',  7,    m.hi20(4*4*F))
+  m.asm('addi', 7, 7, m.lo12(4*4*F))
+
+  # matmul (R*R, C) x (C, F) -> (R*R, F)
+  for i in range(R*R//S):
+    m.asm('lui',  8,      m.hi20(a_base + 4*C*S*i))  # x8 =  ...
+    m.asm('addi', 8, 8,   m.lo12(a_base + 4*C*S*i))
+    m.asm('lui',  9,      m.hi20(a_base + 4*C*S*i + 8*C))  # x9 = x8 + 4*C*2
+    m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i + 8*C))
+    m.asm('lui',  14,     m.hi20(y_base + 4*F*S*i))  # x14 = ...
+    m.asm('addi', 14, 14, m.lo12(y_base + 4*F*S*i))
+    m.asm('addi', 15, 14, 4*F)  # same as x14, but increased by 4*F for row=1
+    m.asm('addi', 16, 15, 4*F)  # same as x15, but increased by 4*F for row=2
+    m.asm('addi', 17, 16, 4*F)  # same as x16, but increased by 4*F for row=3
+
+    # matmul (S, C) x (C, F) -> (S, F)
+    for j in range(F//4):
+      # set base address pointers
+      m.asm('add', 10, 8, 0) # x10 = x8
+      m.asm('add', 11, 9, 0) # x11 = x9
+      m.asm('lui',  12,     m.hi20(w_base + 16*j))  # x12 = w_base + 16*j
+      m.asm('addi', 12, 12, m.lo12(w_base + 16*j))
+      m.asm('lui',  13,     m.hi20(w_base + 16*j + 8*F))  # x13 = x12 + 4*F*2
+      m.asm('addi', 13, 13, m.lo12(w_base + 16*j + 8*F))
+
+      # matmul (S, C) x (C, 4) -> (S, 4)
+      for k in range(C//4):
+        # compute one Sx4 matmul (by computing 4 outer products)
+        for ii in range(4):
+          # load row ii of W into registers f12 ... f15
+          for col in range(4):
+            m.asm('flw.s', 12+col, 4*(col+F*(ii%2)), 12+ii//2) # use x12 for ii=0,1, x13 for ii=2,3
+          # compute outer-product in row-major order
+          for row in range(S):
+            m.asm('flw.s', 11, 4*(C*(row%2) + ii), 10+row//2)  # load f11 with A[row, ii]
+            for col in range(4):
+              if ii==0 and k==0:  # no accumulation for the very first products
+                m.asm('fmul.s', 16+4*row+col, 11, 12+col)  # f[] = f11 * f12
+              else:
+                m.asm('fmadd.s', 16+4*row+col, 11, 12+col, 16+4*row+col) # f[] += f11 * f12
+
+        # increment base addresses for A and W
+        m.asm('addi', 10, 10, 4*4)  # increment by 16
+        m.asm('addi', 11, 11, 4*4)  # increment by 16
+        m.asm('add', 12, 12, 7)
+        m.asm('add', 13, 13, 7)
+
+      # store results in memory
+      for row in range(S):
+        for col in range(4):
+          m.asm('fsw.s', 16+4*row+col, 4*col, 14+row)  # use x14 for row=0, x15 for row=1, etc.
+      # increment Y pointers by 16
+      for row in range(S):
+        m.asm('addi', 14+row, 14+row, 4*4)
+  m.lbl('end')
+
+  # execute program from 'start' to 'end'
+  m.exe(start='start', end='end')
 
 #-------------------------------------------------------------------------------
 # Depthwise Conv2D 3x3 with C channels, RxR image, stride=1
@@ -94,14 +179,14 @@ def dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base, out_chan_first=True):
   C channels, R resolution, stride = 1. If out_chan_first==True, then the
   output shape is (channel, row, col); otherwise shape is (row, col, channel)
   Register map:
-    x[10] : base address for A[chan]
-    x[11] : base address for W[chan]
-    x[12] : base address for Y[chan]
-    f[0] .. f[8]: the 9 weights of a channel, stored in row-major order
-    f[9]  : holds the latest activation loaded from memory
-    f[10] : accumulation register 'out0' for current output
-    f[11] : accumulation register 'out1' for next output
-    f[12] : accumulation register 'out2' for next-next output"""
+    x10 : base address for A[chan]
+    x11 : base address for W[chan]
+    x12 : base address for Y[chan]
+    f0 .. f8: the 9 weights of a channel, stored in row-major order
+    f9  : holds the latest activation loaded from memory
+    f10 : accumulation register 'out0' for current output
+    f11 : accumulation register 'out1' for next output
+    f12 : accumulation register 'out2' for next-next output"""
 
   # init base addresses
   m.LI(10, a_base)
@@ -171,13 +256,13 @@ def dw_conv_3x3_stride2(m, C, R, a_base, w_base, y_base, out_chan_first=True):
   If out_chan_first==True, then the output shape is (channel, row, col);
   otherwise shape is (row, col, channel)
   Register map:
-    x[10] : base address for A[chan]
-    x[11] : base address for W[chan]
-    x[12] : base address for Y[chan]
-    f[0] .. f[8]: the 9 weights of a channel, stored in row-major order
-    f[9]  : holds the latest activation loaded from memory
-    f[10] : accumulation register 'out0' for current output
-    f[11] : accumulation register 'out1' for next output"""
+    x10 : base address for A[chan]
+    x11 : base address for W[chan]
+    x12 : base address for Y[chan]
+    f0 .. f8: the 9 weights of a channel, stored in row-major order
+    f9  : holds the latest activation loaded from memory
+    f10 : accumulation register 'out0' for current output
+    f11 : accumulation register 'out1' for next output"""
 
   # init base addresses
   Q = R//2  # output resolution
@@ -243,14 +328,14 @@ def conv_3x3x3_stride1(m, F, R, a_base, w_base, y_base):
   """assembly code with upper-case instruction for conv2D 3x3 with 3 in-channels,
   F out-channels, stride = 1, R input and output resolution.
   Register map:
-    x[10] : base address for A[chan]
-    x[11] : base address for W[chan]
-    x[12] : base address for Y[chan]
-    f[0] .. f[26]: the 27 weights (3, 3, 3) for one output channel
-    f[27] : holds the latest activation loaded from memory
-    f[28] : accumulation register 'out0' for current output
-    f[29] : accumulation register 'out1' for next output
-    f[30] : accumulation register 'out2' for next-next output"""
+    x10 : base address for A[chan]
+    x11 : base address for W[chan]
+    x12 : base address for Y[chan]
+    f0 .. f26: the 27 weights (3, 3, 3) for one output channel
+    f27 : holds the latest activation loaded from memory
+    f28 : accumulation register 'out0' for current output
+    f29 : accumulation register 'out1' for next output
+    f30 : accumulation register 'out2' for next-next output"""
 
   # init base addresses
   m.LI(10, a_base)
@@ -306,13 +391,13 @@ def conv_3x3x3_stride2(m, F, R, a_base, w_base, y_base):
   Note on stride=2: keras does the striding as follows: the first valid output
   equals the [1, 1] output of the non-strided version, etc.
   Register map:
-    x[10] : base address for A[chan]
-    x[11] : base address for W[chan]
-    x[12] : base address for Y[chan]
-    f[0] .. f[26]: the 27 weights (3, 3, 3) for one output channel
-    f[27] : holds the latest activation loaded from memory
-    f[28] : accumulation register 'out0' for current output
-    f[29] : accumulation register 'out1' for next output"""
+    x10 : base address for A[chan]
+    x11 : base address for W[chan]
+    x12 : base address for Y[chan]
+    f0 .. f26: the 27 weights (3, 3, 3) for one output channel
+    f27 : holds the latest activation loaded from memory
+    f28 : accumulation register 'out0' for current output
+    f29 : accumulation register 'out1' for next output"""
 
   # init base addresses
   Q = R//2  # output resolution
