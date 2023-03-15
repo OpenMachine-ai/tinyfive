@@ -21,7 +21,8 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   be set to 4 if R*R is divisible by 4. Otherwise, if R*R is divisible by 3,
   then set S to 3, other R values are currently not supported.
   Register map:
-    x8  : constant for incrementing x11  (only needed for F >= 128)
+    x7  : constant for incrementing x12 (only needed for trans==True)
+    x8  : constant for incrementing x11 (only needed for F >= 128)
     x9  : 1st base address for A
     x10 : 2nd base address for A
     x11 : base address for W
@@ -39,12 +40,16 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   m.asm('lui',  8,    m.hi20(4*4*F))
   m.asm('addi', 8, 8, m.lo12(4*4*F))
 
+  if trans:  # only needed for trans and if R > 11 (i.e. if 4*4*R*R >= 2048)
+    m.asm('lui',  7,    m.hi20(4*4*R*R))
+    m.asm('addi', 7, 7, m.lo12(4*4*R*R))
+
   # matmul (R*R, C) x (C, F) -> (R*R, F)
   for i in range(R*R//S):  # S is 4 or 3
     m.asm('lui',  9,      m.hi20(a_base + 4*C*S*i))  # x9 =  ...
     m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i))
-    m.asm('lui',  12,     m.hi20(y_base + (4*4*i if trans else 4*F*S*i)))
-    m.asm('addi', 12, 12, m.lo12(y_base + (4*4*i if trans else 4*F*S*i)))
+    m.asm('lui',  12,     m.hi20(y_base + (4*S*i if trans else 4*F*S*i)))
+    m.asm('addi', 12, 12, m.lo12(y_base + (4*S*i if trans else 4*F*S*i)))
 
     # matmul (S, C) x (C, F) -> (S, F)
     for j in range(F//4):
@@ -77,7 +82,10 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
       for row in range(S):
         for col in range(4):
           m.asm('fsw.s', 16+4*row+col, 4*(col*R*R+row) if trans else 4*(row*F+col), 12)
-      m.asm('addi', 12, 12, 4*4*R*R if trans else 4*4)  # increment Y pointer
+      if trans:
+        m.asm('add', 12, 12, 7)  # increment Y pointer by x7
+      else:
+        m.asm('addi', 12, 12, 4*4)  # increment Y pointer by 16
   m.lbl('end')
 
   # execute program from 'start' to 'end'
@@ -93,11 +101,13 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   # the W-matrix in transposed form, which gives us a bit more indexing room
 
 #-------------------------------------------------------------------------------
-# Same as conv_1x1 but with support of C,F > 128
+# Same as conv_1x1 but with support of C,F > 128 or large R for transposed
 #-------------------------------------------------------------------------------
-def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, S=4):
-  """same as conv_1x1, but for C,F > 128 (up to 256 for now).
+def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
+  """same as conv_1x1, but for C,F > 128 (up to 256 for now) if trans==False
+  or for larger R if trans==True.
   Register map:
+    x6  : constant for incrementing x14 .. x17 (only needed for trans==True)
     x7  : constant for incrementing x12 and x13 (only needed for F >= 128)
     x8,  x9  : 1st base address registers for A
     x10, x11 : 2nd base address registers for A
@@ -115,17 +125,21 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, S=4):
   m.asm('lui',  7,    m.hi20(4*4*F))
   m.asm('addi', 7, 7, m.lo12(4*4*F))
 
+  if trans:  # only needed for trans and if R > 11 (i.e. if 4*4*R*R >= 2048)
+    m.asm('lui',  6,    m.hi20(4*4*R*R))
+    m.asm('addi', 6, 6, m.lo12(4*4*R*R))
+
   # matmul (R*R, C) x (C, F) -> (R*R, F)
   for i in range(R*R//S):
     m.asm('lui',  8,      m.hi20(a_base + 4*C*S*i))  # x8 =  ...
     m.asm('addi', 8, 8,   m.lo12(a_base + 4*C*S*i))
     m.asm('lui',  9,      m.hi20(a_base + 4*C*S*i + 8*C))  # x9 = x8 + 4*C*2
     m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i + 8*C))
-    m.asm('lui',  14,     m.hi20(y_base + 4*F*S*i))  # x14 = ...
-    m.asm('addi', 14, 14, m.lo12(y_base + 4*F*S*i))
-    m.asm('addi', 15, 14, 4*F)  # same as x14, but increased by 4*F for row=1
-    m.asm('addi', 16, 15, 4*F)  # same as x15, but increased by 4*F for row=2
-    m.asm('addi', 17, 16, 4*F)  # same as x16, but increased by 4*F for row=3
+    m.asm('lui',  14,     m.hi20(y_base + (4*S*i if trans else 4*F*S*i)))  # x14 = ...
+    m.asm('addi', 14, 14, m.lo12(y_base + (4*S*i if trans else 4*F*S*i)))
+    m.asm('addi', 15, 14, 4*R*R if trans else 4*F)
+    m.asm('addi', 16, 15, 4*R*R if trans else 4*F)
+    m.asm('addi', 17, 16, 4*R*R if trans else 4*F)
 
     # matmul (S, C) x (C, F) -> (S, F)
     for j in range(F//4):
@@ -162,10 +176,15 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, S=4):
       # store results in memory
       for row in range(S):
         for col in range(4):
-          m.asm('fsw.s', 16+4*row+col, 4*col, 14+row)  # use x14 for row=0, x15 for row=1, etc.
-      # increment Y pointers by 16
+          if trans:
+            m.asm('fsw.s', 16+4*row+col, 4*row, 14+col)  # use x14 for col=0, x15 for col=1, ..
+          else:
+            m.asm('fsw.s', 16+4*row+col, 4*col, 14+row)  # use x14 for row=0, x15 for row=1, ..
       for row in range(S):
-        m.asm('addi', 14+row, 14+row, 4*4)
+        if trans:
+          m.asm('add', 14+row, 14+row, 6)  # increment Y pointer by x6
+        else:
+          m.asm('addi', 14+row, 14+row, 4*4)  # increment Y pointer by 16
   m.lbl('end')
 
   # execute program from 'start' to 'end'

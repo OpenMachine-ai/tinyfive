@@ -150,10 +150,25 @@ conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=True)
 y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R*R), axes=[1, 0])
 m.print_rel_err(y_asm, y)
 
+# S=3, trans=True
+conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=True, S=3)
+y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R*R), axes=[1, 0])
+m.print_rel_err(y_asm, y)
+
 # S=4, but use conv_1x1_big
 conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start)
 y_asm = m.read_f32_vec(y_base, size=R*R*F).reshape(R*R, F)
 m.print_rel_err(y_asm, y)
+
+# S=4, trans=True, but use conv_1x1_big
+conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=True)
+y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R*R), axes=[1, 0])
+m.print_rel_err(y_asm, y)
+
+# S=3, trans=True, but use conv_1x1_big
+#conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=True, S=3)
+#y_asm = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R*R), axes=[1, 0])
+#m.print_rel_err(y_asm, y)
 
 #-------------------------------------------------------------------------------
 # Example 3: Depthwise Conv2D 3x3 with 4 channels, stride=1,2, 6x6 image
