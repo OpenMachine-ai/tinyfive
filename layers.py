@@ -43,6 +43,8 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   if trans:  # only needed for trans and if R > 11 (i.e. if 4*4*R*R >= 2048)
     m.asm('lui',  7,    m.hi20(4*4*R*R))
     m.asm('addi', 7, 7, m.lo12(4*4*R*R))
+    m.asm('lui',  5,    m.hi20(4*R*R))
+    m.asm('addi', 5, 5, m.lo12(4*R*R))
 
   # matmul (R*R, C) x (C, F) -> (R*R, F)
   for i in range(R*R//S):  # S is 4 or 3
@@ -50,6 +52,9 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
     m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i))
     m.asm('lui',  12,     m.hi20(y_base + (4*S*i if trans else 4*F*S*i)))
     m.asm('addi', 12, 12, m.lo12(y_base + (4*S*i if trans else 4*F*S*i)))
+    m.asm('add', 13, 12, 5)
+    m.asm('add', 14, 13, 5)
+    m.asm('add', 15, 14, 5)
 
     # matmul (S, C) x (C, F) -> (S, F)
     for j in range(F//4):
@@ -81,9 +86,13 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
       # store results in memory
       for row in range(S):
         for col in range(4):
-          m.asm('fsw.s', 16+4*row+col, 4*(col*R*R+row) if trans else 4*(row*F+col), 12)
+          if trans:
+            m.asm('fsw.s', 16+4*row+col, 4*row, 12+col)  # use x12 for col=0, x13 for col=1, ..
+          else:
+            m.asm('fsw.s', 16+4*row+col, 4*(row*F+col), 12)
       if trans:
-        m.asm('add', 12, 12, 7)  # increment Y pointer by x7
+        for col in range(4):
+          m.asm('add', 12+col, 12+col, 7)  # increment Y pointer by x7
       else:
         m.asm('addi', 12, 12, 4*4)  # increment Y pointer by 16
   m.lbl('end')
@@ -184,8 +193,8 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=
             m.asm('fsw.s', 16+4*row+col, 4*col, 14+row)  # use x14 for row=0, x15 for row=1, ..
       # increment Y pointers
       if trans:
-        for row in range(4):
-          m.asm('add', 14+row, 14+row, 6)  # increment Y pointer by x6
+        for col in range(4):
+          m.asm('add', 14+col, 14+col, 6)  # increment Y pointer by x6
       else:
         for row in range(S):
           m.asm('addi', 14+row, 14+row, 4*4)  # increment Y pointer by 16
