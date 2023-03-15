@@ -21,13 +21,13 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   be set to 4 if R*R is divisible by 4. Otherwise, if R*R is divisible by 3,
   then set S to 3, other R values are currently not supported.
   Register map:
-    x7  : constant for incrementing x12 (only needed for trans==True)
-    x8  : constant for incrementing x11 (only needed for F >= 128)
-    x9  : 1st base address for A
-    x10 : 2nd base address for A
-    x11 : base address for W
-    x12 : base address for results Y
-    f11 : to store elements of A
+    x7 : constant for incrementing x12 (only needed for trans==True)
+    x8 : constant for incrementing x11 (only needed for F >= 128)
+    x9 : 1st base address for A
+    x10: 2nd base address for A
+    x11: base address for W
+    x12: base address for results Y
+    f11: to store elements of A
     f12 .. f15: 4 registers to store an entire row of W
     f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]. Note, if S=3, then
                 only 12 of these 16 registers are used."""
@@ -107,13 +107,14 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=
   """same as conv_1x1, but for C,F > 128 (up to 256 for now) if trans==False
   or for larger R if trans==True.
   Register map:
-    x6  : constant for incrementing x14 .. x17 (only needed for trans==True)
-    x7  : constant for incrementing x12 and x13 (only needed for F >= 128)
-    x8,  x9  : 1st base address registers for A
-    x10, x11 : 2nd base address registers for A
-    x12, x13 : 2 base address registers for W (due to 12-bit limit)
-    x14 .. x17 : 4 base address registers for results Y, one for each row
-    f11 : to store elements of A
+    x5: constant for x15 .. x16 (mainly needed for trans==True)
+    x6: constant for incrementing x14 .. x17 (only needed for trans==True)
+    x7: constant for incrementing x12 and x13 (only needed for F >= 128)
+    x8,  x9 : 1st base address registers for A
+    x10, x11: 2nd base address registers for A
+    x12, x13: 2 base address registers for W (due to 12-bit limit)
+    x14 .. x17: 4 base address registers for results Y, one for each row
+    f11: to store elements of A
     f12 .. f15: 4 registers to store an entire row of W
     f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]"""
 
@@ -121,9 +122,10 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=
   m.pc = code_start
   m.lbl('start')
 
-  # only needed if 4*4*F >= 2048 (i.e. for F = 128)
-  m.asm('lui',  7,    m.hi20(4*4*F))
+  m.asm('lui',  7,    m.hi20(4*4*F)) # only needed if 4*4*F >= 2048
   m.asm('addi', 7, 7, m.lo12(4*4*F))
+  m.asm('lui',  5,    m.hi20(4*R*R if trans else 4*F))
+  m.asm('addi', 5, 5, m.lo12(4*R*R if trans else 4*F))
 
   if trans:  # only needed for trans and if R > 11 (i.e. if 4*4*R*R >= 2048)
     m.asm('lui',  6,    m.hi20(4*4*R*R))
@@ -137,9 +139,9 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=
     m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i + 8*C))
     m.asm('lui',  14,     m.hi20(y_base + (4*S*i if trans else 4*F*S*i)))  # x14 = ...
     m.asm('addi', 14, 14, m.lo12(y_base + (4*S*i if trans else 4*F*S*i)))
-    m.asm('addi', 15, 14, 4*R*R if trans else 4*F)
-    m.asm('addi', 16, 15, 4*R*R if trans else 4*F)
-    m.asm('addi', 17, 16, 4*R*R if trans else 4*F)
+    m.asm('add', 15, 14, 5)
+    m.asm('add', 16, 15, 5)
+    m.asm('add', 17, 16, 5)
 
     # matmul (S, C) x (C, F) -> (S, F)
     for j in range(F//4):
@@ -180,10 +182,12 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=
             m.asm('fsw.s', 16+4*row+col, 4*row, 14+col)  # use x14 for col=0, x15 for col=1, ..
           else:
             m.asm('fsw.s', 16+4*row+col, 4*col, 14+row)  # use x14 for row=0, x15 for row=1, ..
-      for row in range(S):
-        if trans:
+      # increment Y pointers
+      if trans:
+        for row in range(4):
           m.asm('add', 14+row, 14+row, 6)  # increment Y pointer by x6
-        else:
+      else:
+        for row in range(S):
           m.asm('addi', 14+row, 14+row, 4*4)  # increment Y pointer by 16
   m.lbl('end')
 
