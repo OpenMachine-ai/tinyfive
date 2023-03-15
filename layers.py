@@ -14,19 +14,45 @@ from machine import machine
 #-------------------------------------------------------------------------------
 # Conv2D 1x1 with C in-channels, F out-channels, RxR image resolution
 #-------------------------------------------------------------------------------
+def conv_1x1_concept(m, C, F, R, S, w, a, ref):
+  """Proof of concept for conv_1x1 assembly implementation for C in-channels,
+  F out-channels, and R resolution, weight matrix 'w' and activation matrix 'a',
+  and output reference matrix 'ref'. The proof-of-concept is as follows:
+    - Split W into 4x4 submatrices and A into Sx4 submatrices, where S could be
+      4 or 3 (this is to support cases where R*R is divisible by 4 or 3)
+    - Then compute matmuls between these smaller submatrices to generate the
+      big matmul between A and W."""
+  a_split = np.empty((R*R//S, C//4, S, 4))
+  w_split = np.empty((C//4, F//4, 4, 4))
+  for i in range(C//4):
+    for j in range(F//4):
+      w_split[i, j] = w[i*4:i*4+4, j*4:j*4+4]
+  for i in range(R*R//S):
+    for j in range(C//4):
+      a_split[i, j] = a[i*S:i*S+S, j*4:j*4+4]
+  # compute the big matmul by smaller 4x4 matmuls
+  y_con = np.zeros((R*R, F))
+  for i in range(R*R//S):
+    for j in range(F//4):
+      for k in range(C//4):
+        y_con[S*i:S*i+S, 4*j:4*j+4] += np.matmul(a_split[i, k], w_split[k, j])
+  m.print_rel_err(y_con, ref)  # compare y_con against reference 'ref'
+
 def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
-  """assembly code for conv2D 1x1, F in-channels, F out-channels, resolution R.
+  """assembly code for conv2D 1x1, C in-channels, F out-channels, resolution R.
   C and F can be up to 128 (because immediates are limited to 12-bit). If trans
   is True, then the output is written into memory in transposed form. S should
   be set to 4 if R*R is divisible by 4. Otherwise, if R*R is divisible by 3,
   then set S to 3, other R values are currently not supported.
   Register map:
-    x7 : constant for incrementing x12 (only needed for trans==True)
-    x8 : constant for incrementing x11 (only needed for F >= 128)
-    x9 : 1st base address for A
+    x5:  constant for x15 .. x17 (only needed for trans)
+    x6 : constant for incrementing x14 .. x17 (only needed for trans)
+    x7 : constant for incrementing x12 (only needed for F >= 128)
+    x8 : 1st base address for A
     x10: 2nd base address for A
-    x11: base address for W
-    x12: base address for results Y
+    x12: base address for W
+    x14: base address for results Y
+    x15 .. x17: additional base regs for results Y (only needed for trans)
     f11: to store elements of A
     f12 .. f15: 4 registers to store an entire row of W
     f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]. Note, if S=3, then
@@ -37,31 +63,31 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   m.lbl('start')
 
   # only needed if 4*4*F >= 2048 (i.e. for F = 128)
-  m.asm('lui',  8,    m.hi20(4*4*F))
-  m.asm('addi', 8, 8, m.lo12(4*4*F))
+  m.asm('lui',  7,    m.hi20(4*4*F))
+  m.asm('addi', 7, 7, m.lo12(4*4*F))
 
   if trans:  # only needed for trans and if R > 11 (i.e. if 4*4*R*R >= 2048)
-    m.asm('lui',  7,    m.hi20(4*4*R*R))
-    m.asm('addi', 7, 7, m.lo12(4*4*R*R))
+    m.asm('lui',  6,    m.hi20(4*4*R*R))
+    m.asm('addi', 6, 6, m.lo12(4*4*R*R))
     m.asm('lui',  5,    m.hi20(4*R*R))
     m.asm('addi', 5, 5, m.lo12(4*R*R))
 
   # matmul (R*R, C) x (C, F) -> (R*R, F)
   for i in range(R*R//S):  # S is 4 or 3
-    m.asm('lui',  9,      m.hi20(a_base + 4*C*S*i))  # x9 =  ...
-    m.asm('addi', 9, 9,   m.lo12(a_base + 4*C*S*i))
-    m.asm('lui',  12,     m.hi20(y_base + (4*S*i if trans else 4*F*S*i)))
-    m.asm('addi', 12, 12, m.lo12(y_base + (4*S*i if trans else 4*F*S*i)))
-    m.asm('add', 13, 12, 5)
-    m.asm('add', 14, 13, 5)
+    m.asm('lui',  8,      m.hi20(a_base + 4*C*S*i))  # x8 =  ...
+    m.asm('addi', 8, 8,   m.lo12(a_base + 4*C*S*i))
+    m.asm('lui',  14,     m.hi20(y_base + (4*S*i if trans else 4*F*S*i)))
+    m.asm('addi', 14, 14, m.lo12(y_base + (4*S*i if trans else 4*F*S*i)))
     m.asm('add', 15, 14, 5)
+    m.asm('add', 16, 15, 5)
+    m.asm('add', 17, 16, 5)
 
     # matmul (S, C) x (C, F) -> (S, F)
     for j in range(F//4):
       # set base address pointers
-      m.asm('add', 10, 9, 0) # reset A pointer to x9
-      m.asm('lui',  11,     m.hi20(w_base + 16*j))  # x11 = w_base + 16*j
-      m.asm('addi', 11, 11, m.lo12(w_base + 16*j))
+      m.asm('add', 10, 8, 0) # reset A pointer to x8
+      m.asm('lui',  12,     m.hi20(w_base + 16*j))  # x12 = w_base + 16*j
+      m.asm('addi', 12, 12, m.lo12(w_base + 16*j))
 
       # matmul (S, C) x (C, 4) -> (S, 4)
       for k in range(C//4):
@@ -69,7 +95,7 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
         for ii in range(4):
           # load row ii of W into registers f12 ... f15
           for col in range(4):
-            m.asm('flw.s', 12+col, 4*(col+F*ii), 11)
+            m.asm('flw.s', 12+col, 4*(col+F*ii), 12)
           # compute outer-product in row-major order
           for row in range(S):
             m.asm('flw.s', 11, 4*(C*row+ii), 10)  # load f11 with A[row, ii]
@@ -81,20 +107,20 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
 
         # increment base addresses for A and W
         m.asm('addi', 10, 10, 4*4)  # increment x10 by 16
-        m.asm('add', 11, 11, 8)     # increment x11
+        m.asm('add', 12, 12, 7)     # increment x12
 
       # store results in memory
       for row in range(S):
         for col in range(4):
           if trans:
-            m.asm('fsw.s', 16+4*row+col, 4*row, 12+col)  # use x12 for col=0, x13 for col=1, ..
+            m.asm('fsw.s', 16+4*row+col, 4*row, 14+col)  # x14 for col=0, x15 for col=1, ..
           else:
-            m.asm('fsw.s', 16+4*row+col, 4*(row*F+col), 12)
+            m.asm('fsw.s', 16+4*row+col, 4*(row*F+col), 14)
       if trans:
         for col in range(4):
-          m.asm('add', 12+col, 12+col, 7)  # increment Y pointer by x7
+          m.asm('add', 14+col, 14+col, 6)  # increment Y pointer by x7
       else:
-        m.asm('addi', 12, 12, 4*4)  # increment Y pointer by 16
+        m.asm('addi', 14, 14, 4*4)  # increment Y pointer by 16
   m.lbl('end')
 
   # execute program from 'start' to 'end'
@@ -110,22 +136,23 @@ def conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   # the W-matrix in transposed form, which gives us a bit more indexing room
 
 #-------------------------------------------------------------------------------
-# Same as conv_1x1 but with support of C,F > 128 or large R for transposed
+# Same as conv_1x1 but with support for C,F > 128 or for large R when transposed
 #-------------------------------------------------------------------------------
 def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=4):
   """same as conv_1x1, but for C,F > 128 (up to 256 for now) if trans==False
   or for larger R if trans==True.
   Register map:
-    x5: constant for x15 .. x16 (mainly needed for trans==True)
-    x6: constant for incrementing x14 .. x17 (only needed for trans==True)
+    x5: constant for x15 .. x17 (mainly needed for trans)
+    x6: constant for incrementing x14 .. x17 (only needed for trans)
     x7: constant for incrementing x12 and x13 (only needed for F >= 128)
     x8,  x9 : 1st base address registers for A
     x10, x11: 2nd base address registers for A
     x12, x13: 2 base address registers for W (due to 12-bit limit)
-    x14 .. x17: 4 base address registers for results Y, one for each row
+    x14 .. x17: 4 base address registers for results Y
     f11: to store elements of A
     f12 .. f15: 4 registers to store an entire row of W
-    f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]"""
+    f16 .. f31: the 16 outputs res[0, 0] ... res[4, 4]. Note, if S=3, then
+                only 12 of these 16 registers are used."""
 
   # store assembly program starting at address 'code_start'
   m.pc = code_start
@@ -202,6 +229,8 @@ def conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, trans=False, S=
 
   # execute program from 'start' to 'end'
   m.exe(start='start', end='end')
+
+# TODO: merge conv1x1_big() into conv1x1()
 
 #-------------------------------------------------------------------------------
 # Depthwise Conv2D 3x3 with C channels, RxR image, stride=1

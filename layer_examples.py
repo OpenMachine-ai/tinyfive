@@ -91,35 +91,19 @@ y_k = Conv2D(F, 1, kernel_initializer=constant(w_k))(a_k)
 #   print(layer.get_weights()[1].shape)  # print biases
 
 #-------------------------------------------------------------------------------
-# flatten keras tensors, compare with matmul
+# flatten keras tensors
 a = a_k.reshape(R*R, C)  # a_k (1, R, R, C)  -> A (R*R, C)
 w = w_k.reshape(C, F)    # w_k (1, 1, C, F) -> W (C, F)
 y = y_k.numpy().reshape(R*R, F)
-m.print_rel_err(np.matmul(a, w), y)  # compare matmul vs. keras conv2D
 
 #-------------------------------------------------------------------------------
-# proof of concept: split W and A into 4x4 submatrices, then compute matmul(A, W)
-# specifically, divide W into 4x4 submatrices and A into Sx4 submatrices, where S
-# could be 4 or 3 (this is to support cases where R*R is divisible by 4 or 3)
+# proof of concept
 
-# TODO: move proof of concept to layers.py
+# first, compare keras conv2D with simple numpy matmul
+m.print_rel_err(np.matmul(a, w), y)
 
-S = 4
-a_split = np.empty((R*R//S, C//4, S, 4))
-w_split = np.empty((C//4, F//4, 4, 4))
-for i in range(C//4):
-  for j in range(F//4):
-    w_split[i, j] = w[i*4:i*4+4, j*4:j*4+4]
-for i in range(R*R//S):
-  for j in range(C//4):
-    a_split[i, j] = a[i*S:i*S+S, j*4:j*4+4]
-# compute the big matmul by smaller 4x4 matmuls
-y_con = np.zeros((R*R, F))
-for i in range(R*R//S):
-  for j in range(F//4):
-    for k in range(C//4):
-      y_con[S*i:S*i+S, 4*j:4*j+4] += np.matmul(a_split[i, k], w_split[k, j])
-m.print_rel_err(y_con, y)  # compare y_con against Y
+# proof of concept
+conv_1x1_concept(m, C, F, R, 4, w, a, y)  # set S=4
 
 #-------------------------------------------------------------------------------
 # run assembly and compare for various implementations
