@@ -184,57 +184,47 @@ m.write_f32_vec(             w27.flatten(),                  w27_base)
 m.write_f32_vec(inp.flatten(), a1_base)
 
 #-------------------------------------------------------------------------------
-# run assembly code
+# run assembly code and check against keras
 #-------------------------------------------------------------------------------
-conv_3x3x3_stride2( m,   8, 96,  a1_base,  w1_base,  a2_base)
-dw_conv_3x3_stride1(m,   8, 48,  a2_base,  w2_base,  a3_base, out_chan_first=False)
-conv_1x1(m,         8,  16, 48,  a3_base,  w3_base,  a4_base, code_start, trans=True)
-dw_conv_3x3_stride2(m,  16, 48,  a4_base,  w4_base,  a5_base, out_chan_first=False)
-conv_1x1(m,        16,  32, 24,  a5_base,  w5_base,  a6_base, code_start, trans=True)
-dw_conv_3x3_stride1(m,  32, 24,  a6_base,  w6_base,  a7_base, out_chan_first=False)
-conv_1x1(m,        32,  32, 24,  a7_base,  w7_base,  a8_base, code_start, trans=True)
-dw_conv_3x3_stride2(m,  32, 24,  a8_base,  w8_base,  a9_base, out_chan_first=False)
-conv_1x1(m,        32,  64, 12,  a9_base,  w9_base, a10_base, code_start, trans=True)
-dw_conv_3x3_stride1(m,  64, 12, a10_base, w10_base, a11_base, out_chan_first=False)
-conv_1x1(m,        64,  64, 12, a11_base, w11_base, a12_base, code_start, trans=True)
-dw_conv_3x3_stride2(m,  64, 12, a12_base, w12_base, a13_base, out_chan_first=False)
-conv_1x1(m,        64, 128,  6, a13_base, w13_base, a14_base, code_start, trans=True)
-dw_conv_3x3_stride1(m, 128,  6, a14_base, w14_base, a15_base, out_chan_first=False)
-conv_1x1(m,       128, 128,  6, a15_base, w15_base, a16_base, code_start, trans=True)
-# skip layers 16-23 because they are identical to layers 14-15; TODO: add them
-dw_conv_3x3_stride2(m, 128,  6, a24_base, w24_base, a25_base, out_chan_first=False)
-conv_1x1_big(m,   128, 256,  3, a25_base, w25_base, a26_base, code_start, S=3, trans=True)
-dw_conv_3x3_stride1(m, 256,  3, a26_base, w26_base, a27_base, out_chan_first=False)
-conv_1x1_big(m,   256, 256,  3, a27_base, w27_base, a28_base, code_start, S=3)
-
-#-------------------------------------------------------------------------------
-# compare assembly with keras
-#-------------------------------------------------------------------------------
-def compare_cpu_vs_ref(m, C, R, y_base, ref, trans=False):
+def compare_cpu_vs_ref(m, F, R, y_base, ref, trans=False):
   """compare CPU machine versus reference (Keras, PyTorch)"""
   if trans==False:
-    cpu = m.read_f32_vec(y_base, size=R*R*C).reshape(R, R, C)
+    cpu = m.read_f32_vec(y_base, size=R*R*F).reshape(R, R, F)
   else:
-    cpu = np.transpose(m.read_f32_vec(y_base, size=R*R*C).reshape(C, R, R), axes=[1, 2, 0])
-  m.print_rel_err(cpu, ref.numpy().reshape(R, R, C))
+    cpu = np.transpose(m.read_f32_vec(y_base, size=R*R*F).reshape(F, R, R), axes=[1, 2, 0])
+  m.print_rel_err(cpu, ref.numpy().reshape(R, R, F))
 
-#compare_cpu_vs_ref(m,   8, 48,  a2_base,  l1, trans=True)
-#compare_cpu_vs_ref(m,   8, 48,  a3_base,  l2)
-#compare_cpu_vs_ref(m,  16, 48,  a4_base,  l3, trans=True)
-#compare_cpu_vs_ref(m,  16, 24,  a5_base,  l4)
-compare_cpu_vs_ref(m,  32, 24,  a6_base,  l5, trans=True)
-compare_cpu_vs_ref(m,  32, 24,  a7_base,  l6)
-compare_cpu_vs_ref(m,  32, 24,  a8_base,  l7, trans=True)
-compare_cpu_vs_ref(m,  32, 12,  a9_base,  l8)
-compare_cpu_vs_ref(m,  64, 12, a10_base,  l9, trans=True)
-compare_cpu_vs_ref(m,  64, 12, a11_base, l10)
-compare_cpu_vs_ref(m,  64, 12, a12_base, l11, trans=True)
-compare_cpu_vs_ref(m,  64,  6, a13_base, l12)
-compare_cpu_vs_ref(m, 128,  6, a14_base, l13, trans=True)
-compare_cpu_vs_ref(m, 128,  6, a15_base, l14)
-compare_cpu_vs_ref(m, 128,  6, a16_base, l15, trans=True)
+def run_layer(m, ltype, stride, C, F, R, a_base, w_base, y_base, code_start, ref, trans=False):
+  """run one layer in assembly and compare resulting tensor with reference 'ref'"""
+  if ltype=='conv_3x3x3' and stride==2:
+    conv_3x3x3_stride2(m, F, R, a_base, w_base, y_base)
+  elif ltype=='dw_conv_3x3' and stride==1:
+    dw_conv_3x3_stride1(m, C, R, a_base, w_base, y_base, out_chan_first=False)
+  elif ltype=='dw_conv_3x3' and stride==2:
+    dw_conv_3x3_stride2(m, C, R, a_base, w_base, y_base, out_chan_first=False)
+  elif ltype=='conv_1x1' and F<256:
+    conv_1x1(m, C, F, R, a_base, w_base, y_base, code_start, trans=trans)
+  else:
+    conv_1x1_big(m, C, F, R, a_base, w_base, y_base, code_start, S=3, trans=trans)
+  compare_cpu_vs_ref(m, F, R//stride, y_base, ref, trans)
+
+run_layer(m, 'conv_3x3x3',  2,   3,   8, 96,  a1_base,  w1_base,  a2_base, code_start,  l1, trans=True)
+run_layer(m, 'dw_conv_3x3', 1,   8,   8, 48,  a2_base,  w2_base,  a3_base, code_start,  l2)
+run_layer(m, 'conv_1x1',    1,   8,  16, 48,  a3_base,  w3_base,  a4_base, code_start,  l3, trans=True)
+run_layer(m, 'dw_conv_3x3', 2,  16,  16, 48,  a4_base,  w4_base,  a5_base, code_start,  l4)
+run_layer(m, 'conv_1x1',    1,  16,  32, 24,  a5_base,  w5_base,  a6_base, code_start,  l5, trans=True)
+run_layer(m, 'dw_conv_3x3', 1,  32,  32, 24,  a6_base,  w6_base,  a7_base, code_start,  l6)
+run_layer(m, 'conv_1x1',    1,  32,  32, 24,  a7_base,  w7_base,  a8_base, code_start,  l7, trans=True)
+run_layer(m, 'dw_conv_3x3', 2,  32,  32, 24,  a8_base,  w8_base,  a9_base, code_start,  l8)
+run_layer(m, 'conv_1x1',    1,  32,  64, 12,  a9_base,  w9_base, a10_base, code_start,  l9, trans=True)
+run_layer(m, 'dw_conv_3x3', 1,  64,  64, 12, a10_base, w10_base, a11_base, code_start, l10)
+run_layer(m, 'conv_1x1',    1,  64,  64, 12, a11_base, w11_base, a12_base, code_start, l11, trans=True)
+run_layer(m, 'dw_conv_3x3', 2,  64,  64, 12, a12_base, w12_base, a13_base, code_start, l12)
+run_layer(m, 'conv_1x1',    1,  64, 128,  6, a13_base, w13_base, a14_base, code_start, l13, trans=True)
+run_layer(m, 'dw_conv_3x3', 1, 128, 128,  6, a14_base, w14_base, a15_base, code_start, l14)
+run_layer(m, 'conv_1x1',    1, 128, 128,  6, a15_base, w15_base, a16_base, code_start, l15, trans=True)
 # skip layers 16-23 because they are identical to layers 14-15; TODO: add them
-compare_cpu_vs_ref(m, 128,  3, a25_base, l24)
-compare_cpu_vs_ref(m, 256,  3, a26_base, l25, trans=True)
-compare_cpu_vs_ref(m, 256,  3, a27_base, l26)
-compare_cpu_vs_ref(m, 256,  3, a28_base, l27)
+run_layer(m, 'dw_conv_3x3', 2, 128, 128,  6, a24_base, w24_base, a25_base, code_start, l24)
+run_layer(m, 'conv_1x1',    1, 128, 256,  3, a25_base, w25_base, a26_base, code_start, l25, trans=True)
+run_layer(m, 'dw_conv_3x3', 1, 256, 256,  3, a26_base, w26_base, a27_base, code_start, l26)
+run_layer(m, 'conv_1x1',    1, 256, 256,  3, a27_base, w27_base, a28_base, code_start, l27)
