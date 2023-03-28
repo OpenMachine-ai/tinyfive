@@ -72,9 +72,9 @@ R = 6   # resolution of image (tested it up to 48 with C = 8)
 # generate activations and weights for keras (suffix *k is for keras)
 a_k = np.random.normal(size=(1, R, R, C)).astype(np.float32)
 w_k = np.random.normal(size=(1, 1, C, F)).astype(np.float32)
-  # input shape:  (1, R, R, C) : batch-size, 4x4 image, channels
-  # output shape: (1, R, R, F) : batch-size, 4x4 image, channels
-  # kernel shape: (1, 1, C, F) : 1x1 kernel, in-channels, out-channels
+# input shape:  (1, R, R, C) : batch-size, 4x4 image, channels
+# output shape: (1, R, R, F) : batch-size, 4x4 image, channels
+# kernel shape: (1, 1, C, F) : 1x1 kernel, in-channels, out-channels
 
 # run inference with keras (golden reference)
 y_k = Conv2D(F, 1, kernel_initializer=constant(w_k))(a_k)
