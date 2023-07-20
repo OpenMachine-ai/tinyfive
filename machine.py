@@ -74,8 +74,8 @@ class machine:
   def BGEU(s,rs1,rs2,imm): s.pc += imm if s.u(s.x[rs1]) >= s.u(s.x[rs2]) else 4
 
   # jump
-  def JAL (s,rd,imm): s.x[rd] = s.pc + 4; s.pc += imm
-  def JALR(s,rd,rs1,imm): t = s.pc + 4; s.pc = (s.x[rs1] + imm) & ~1; s.x[rd] = t
+  def JAL (s,rd,imm): s.x[rd] = s.pc + 4; s.pc += imm; s.x[0] = 0
+  def JALR(s,rd,rs1,imm): t = s.pc + 4; s.pc = (s.x[rs1] + imm) & ~1; s.x[rd] = t; s.x[0] = 0
 
   # load immediate
   def LUI  (s,rd,imm): s.x[rd] = imm << 12;          s.ipc()
