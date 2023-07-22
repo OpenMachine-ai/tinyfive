@@ -5,9 +5,10 @@
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=views+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
 
 TinyFive is a lightweight RISC-V emulator and assembler written entirely in Python:
-- It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with your neural network in Python (and without relying on RISC-V toolchains). Custom instructions can be easily added.
-- TinyFive is also useful for ML scientists who are using ML/RL for compiler optimization (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)).
-- If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code.
+- It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with a neural network in Keras or PyTorch (and without relying on RISC-V toolchains).
+- Custom instructions can be added easily to simplify HW/SW codesign (all in your familiar Python, without C++ and toolchains).
+- If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code (check out the colab).
+- TinyFive might also be useful for ML scientists who are using ML/RL for compiler optimizations (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)) or to replace compiler toolchains by AI.
 - Can be very fast if you only use the upper-case instructions defined in the [first ~200 lines of machine.py](machine.py#L1-L200).
 - [Fewer than 1000 lines](machine.py) of code (w/o tests and examples)
 - Uses NumPy for math
@@ -437,8 +438,8 @@ If you don't want to run above steps on your local machine, you can run it in a 
 !python3 tests.py
 ```
 ## Contributing
-If you are interested in helping make TinyFive better, I highly welcome you to do so. I thank you in advance for your interest. 
-If you are unsure of what you could do to improve the project, you may have a look [here](https://github.com/OpenMachine-ai/tinyfive/issues/5).  And if you like this project, give it a ⭐ and share it with friends!
+If you like this project, give it a ⭐ and share it with friends!  And if you are interested in helping make TinyFive better, 
+I highly welcome you to do so. I thank you in advance for your interest.  If you are unsure of what you could do to improve the project, you may have a look [here](https://github.com/OpenMachine-ai/tinyfive/issues/5).  
 
 ## Latest status
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
@@ -477,7 +478,7 @@ other free versions are [available here](http://riscvbook.com).
 - [Online simulator](https://ascslab.org/research/briscv/simulator/simulator.html) for debug
 
 ## Tiny Tech promise
-Similar to [tinygrad](https://github.com/geohot/tinygrad), [micrograd](https://github.com/karpathy/micrograd), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of LOC). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines.
+Similar to [TinyEMU](https://bellard.org/tinyemu/), [tinygrad](https://github.com/geohot/tinygrad), and other “tiny tech” projects, we believe that core technology should be simple and small (in terms of LOC). Therefore, we will make sure that the core of TinyFive (without tests and examples) will always be below 1000 lines.
 
 Simplicity and size (in terms of number of instructions) is a key feature of [RISC](https://en.wikipedia.org/wiki/Reduced_instruction_set_computer): the "R" in RISC stands for "reduced" (as opposed to complex CISC). Specifically, the ISA manual of RISC-V has only ~200 pages while the ARM-32 manual is over 2000 pages long according to Fig. 1.6 of
 the [RISC-V Reader](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf).
