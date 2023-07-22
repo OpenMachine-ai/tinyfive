@@ -470,6 +470,7 @@ The table below compares TinyFive with other [ISS](https://en.wikipedia.org/wiki
 | [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |     | A, I, M, Zifencei, Zicsr   | < 1k |
 
 ## References
+- [HuggingFive :raised_hand_with_fingers_splayed:](https://github.com/OpenMachine-ai/HuggingFive) 
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf) for a brief description of most instructions. See also the [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
 - Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman. Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
