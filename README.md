@@ -445,7 +445,7 @@ I highly welcome you to do so. I thank you in advance for your interest.  If you
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
 - 37 of the 40 base instructions (RV32I), all instructions of the M-extension (RV32M) and the F-extension (RV32F) with the default rounding mode are already implemented, and many of them are tested.  (The three missing RV32I instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
 - Remaining work: improve testing, add more extensions. See TODOs in the code for more details.
-- Stay updated by following us on [Twitter](https://twitter.com/OpenMachine_AI), [Post.news](​​https://post.news/@/openmachine), and [LinkedIn](https://www.linkedin.com/in/nilsgraef/).
+- Stay updated by following us on [Twitter](https://twitter.com/OpenMachine_AI), [Post.news](https://post.news/@/openmachine), and [LinkedIn](https://www.linkedin.com/in/nilsgraef/).
 
 ## Speed
 - TinyFive is not optimized for speed (but for ease-of-use and [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)).
