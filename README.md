@@ -19,10 +19,12 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
   - [Example 2: Add two vectors](#example-2-add-two-vectors)
   - [Example 3: Multiply two matrices](#example-3-multiply-two-matrices)
   - [Example 4: Neural network layers](#example-4-neural-network-layers)
+  - [Example 5: MobileNet](#example-5-mobilenet)
 - [Running in colab](#running-in-colab)
 - [Running without package](#running-without-package)
-- [Speed](#speed)
+- [Contributing](#contributing)
 - [Latest status](#latest-status)
+- [Speed](#speed)
 - [Comparison](#comparison)
 - [References](#references)
 - [Tiny Tech promise](#tiny-tech-promise)
@@ -385,7 +387,10 @@ The table below shows a speedup of 1.7 with the following caveats:
 | Example 3.4 | 640B  | 22        | 32   | 16    | 64  | 48  | 0      | 160       | 1.7     |
 
 ### Example 4: Neural network layers
-Coming soon, see [file layer_examples.py](layer_examples.py)
+Coming soon, see [file layer_examples.py](layer_examples.py) for now
+
+### Example 5: MobileNet
+Coming soon-ish, see [file mobilenet_v1_0.25.py](mobilenet_v1_0.25.py) for now
 
 ## Running in colab
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb">
@@ -431,17 +436,21 @@ If you don't want to run above steps on your local machine, you can run it in a 
 # run test suite
 !python3 tests.py
 ```
+## Contributing
+If you are interested in helping make TinyFive better, I highly welcome you to do so. I thank you in advance for your interest. 
+If you are unsure of what you could do to improve the project, you may have a look [here](https://github.com/OpenMachine-ai/tinyfive/issues/5).  And if you like this project, give it a ⭐ and share it with friends!
+
+## Latest status
+- TinyFive is still under construction, many things haven't been implemented and tested yet.
+- 37 of the 40 base instructions (RV32I), all instructions of the M-extension (RV32M) and the F-extension (RV32F) with the default rounding mode are already implemented, and many of them are tested.  (The three missing RV32I instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
+- Remaining work: improve testing, add more extensions. See TODOs in the code for more details.
+- Stay updated by following us on [Twitter](https://twitter.com/OpenMachine_AI), [Post.news](​​https://post.news/@/openmachine), and [LinkedIn](https://www.linkedin.com/in/nilsgraef/).
 
 ## Speed
 - TinyFive is not optimized for speed (but for ease-of-use and [LOC](https://en.wikipedia.org/wiki/Source_lines_of_code)).
 - You might be able to use [Codon](https://github.com/exaloop/codon) or PyPy to speed up TinyFive (see e.g. the [Pydgin paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) for details).
 - If you only use the upper-case instructions such as `ADD()`, then TinyFive is very fast because there is no instruction decoding. And you should be able to accelerate it on a GPU or TPU.
 - If you use the lower-case instructions with `asm()` and `exe()`, then execution of these functions is slow as they involve look-up and string matching with O(n) complexity where "n" is the total number of instructions. The current implementations of `asm()` and `dec()` are optimized for ease-of-use and readability. A faster implementation would collapse multiple look-ups into one look-up, optimize the pattern-matching for the instruction decoding (bits -> instruction), and change the order of the instructions so that more frequently used instructions are at the top of the list. [Here is an older version](https://github.com/OpenMachine-ai/tinyfive/blob/2aa4987391561c9c6692602ed3fccdeaee333e0b/tinyfive.py) of TinyFive with a faster `dec()` function that collapses two look-ups (`bits -> instruction` and `instruction -> uppeer-case instruction`) and doesn't use `fnmatch`.
-
-## Latest status
-- TinyFive is still under construction, many things haven't been implemented and tested yet.
-- 37 of the 40 base instructions (RV32I), all instructions of the M-extension (RV32M) and the F-extension (RV32F) with the default rounding mode are already implemented, and many of them are tested.  (The three missing RV32I instructions `fence`, `ebreak`, and `ecall` are not applicable here.)
-- Remaining work: improve testing, add perhaps more extensions. See TODOs in the code for more details.
 
 ## Comparison
 The table below compares TinyFive with other [ISS](https://en.wikipedia.org/wiki/Instruction_set_simulator) and emulator projects.
