@@ -2,14 +2,15 @@
 
 <a href="https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb"> <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Colab" height="20"> </a>
 [![Downloads](https://static.pepy.tech/badge/tinyfive)](https://pepy.tech/project/tinyfive)
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=views+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
-[](https://hits.seeyoufarm.com)
 
+<!--- view counter is currently commented out
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FOpenMachine-ai%2Ftinyfive&title_bg=%23555555&icon=&title=views+%28today+%2F+total%29&edge_flat=false)](https://hits.seeyoufarm.com)
+ --->
 
 TinyFive is a lightweight RISC-V emulator and assembler written entirely in Python:
-- It's useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with a neural network in Keras or PyTorch (and without relying on RISC-V toolchains).
-- Custom instructions can be added easily to simplify HW/SW codesign (all in your familiar Python, without C++ and toolchains).
-- If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code (check out the colab).
+- Useful for running neural networks on RISC-V: Simulate your RISC-V assembly code along with a neural network in Keras or PyTorch (and without relying on RISC-V toolchains).
+- Custom instructions can be added for easy HW/SW codesign in Python (without C++ and compiler toolchains).
+- If you want to learn how RISC-V works, TinyFive lets you play with instructions and assembly code in [this colab](https://colab.research.google.com/github/OpenMachine-ai/tinyfive/blob/main/misc/colab.ipynb).
 - TinyFive might also be useful for ML scientists who are using ML/RL for compiler optimizations (see e.g. [CompilerGym](https://github.com/facebookresearch/CompilerGym/blob/development/README.md)) or to replace compiler toolchains by AI.
 - Can be very fast if you only use the upper-case instructions defined in the [first ~200 lines of machine.py](machine.py#L1-L200).
 - [Fewer than 1000 lines](machine.py) of code (w/o tests and examples)
@@ -382,6 +383,8 @@ print(np.array_equal(res, ref))  # should return 'True'
 The table below shows a speedup of 1.7 with the following caveats:
 - The bit-widths don't make sense for fixed point (in general, multiplying two 32-bit integers produces a 64-bit product; and adding 4 of these products requires up to 66 bits).
 - For runtime calculations, we assume that our RISC-V CPU can only perform one instruction per cycle (while many RISC-V cores can perform multiple instructions per cycle).
+- We assume all 31 registers can be used, which is unrealistic because we ignore register allocation conventions such as the procedure
+calling conventions specified [here](https://github.com/riscv-non-isa/riscv-elf-psabi-doc).
 - For 16x16 or larger matrices, [Strassen's algorithm](https://en.wikipedia.org/wiki/Strassen_algorithm) and [DeepMind's AlphaTensor](https://www.deepmind.com/blog/discovering-novel-algorithms-with-alphatensor) can reduce the total number of multiplications and additions if they are applied recursively.
 
 |             | Image | Registers | Load | Store | Mul | Add | Branch | Total ops | Speedup |
