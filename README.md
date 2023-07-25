@@ -478,7 +478,7 @@ The table below compares TinyFive with other [ISS](https://en.wikipedia.org/wiki
 - [HuggingFive :raised_hand_with_fingers_splayed:](https://github.com/OpenMachine-ai/HuggingFive) 
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf) for a brief description of most instructions. See also the [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
-- Book "The RISC-V Reader: An Open Architecture Atlas" by David Patterson and Andrew Waterman. Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
+- Book [The RISC-V Reader: An Open Architecture Atlas](https://www.abebooks.com/book-search/author/patterson-david-waterman-andrew/) by David Patterson and Andrew Waterman. Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),
 other free versions are [available here](http://riscvbook.com).
 - Pydgin [paper](https://www.csl.cornell.edu/~berkin/ilbeyi-pydgin-riscv2016.pdf) and [video](https://youtu.be/-p_AGki7Vsk)
 - [Online simulator](https://ascslab.org/research/briscv/simulator/simulator.html) for debug
