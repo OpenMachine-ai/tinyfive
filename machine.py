@@ -11,7 +11,7 @@ import fnmatch
 
 class machine:
   def __init__(s, mem_size):  # for brevity we use 's' instead of 'self'
-    """create state of CPU: memory, register file 'x[]', program counter 'pc'"""
+    """create state of CPU: memory mem[], regfiles x[] and f[], program counter 'pc'"""
     s.mem = np.zeros(mem_size, dtype=np.uint8)  # memory 'mem[]' is unsigned int8
     s.x   = np.zeros(32, dtype=np.int32)        # regfile 'x[]' is signed int32
     s.f   = np.zeros(32, dtype=np.float32)      # regfile 'f[]' for F-extension
@@ -29,10 +29,10 @@ class machine:
   def i8(s,x): return np.int8(x)    # convert to 8-bit signed
   def u (s,x): return np.uint32(x)  # convert to 32-bit unsigned
 
-  def ipc(s):
-    """increment pc by 4 and make sure that x[0] is always 0"""
+  def ipc(s, incr=4):
+    """increment pc by 'incr' and make sure that x[0] is always 0"""
     s.x[0] = 0
-    s.pc += 4
+    s.pc += incr
 
   #-------------------------------------------------------------------------------
   # Base instructions (RV32I)
@@ -66,15 +66,15 @@ class machine:
   def SLTIU(s,rd,rs1,imm): s.x[rd] = 1 if s.u(s.x[rs1]) < s.u(imm)      else 0; s.ipc()
 
   # branch
-  def BEQ (s,rs1,rs2,imm): s.pc += imm if s.x[rs1]      == s.x[rs2]      else 4
-  def BNE (s,rs1,rs2,imm): s.pc += imm if s.x[rs1]      != s.x[rs2]      else 4
-  def BLT (s,rs1,rs2,imm): s.pc += imm if s.x[rs1]      <  s.x[rs2]      else 4
-  def BGE (s,rs1,rs2,imm): s.pc += imm if s.x[rs1]      >= s.x[rs2]      else 4
-  def BLTU(s,rs1,rs2,imm): s.pc += imm if s.u(s.x[rs1]) <  s.u(s.x[rs2]) else 4
-  def BGEU(s,rs1,rs2,imm): s.pc += imm if s.u(s.x[rs1]) >= s.u(s.x[rs2]) else 4
+  def BEQ (s,rs1,rs2,imm): s.ipc(imm if s.x[rs1]      == s.x[rs2]      else 4)
+  def BNE (s,rs1,rs2,imm): s.ipc(imm if s.x[rs1]      != s.x[rs2]      else 4)
+  def BLT (s,rs1,rs2,imm): s.ipc(imm if s.x[rs1]      <  s.x[rs2]      else 4)
+  def BGE (s,rs1,rs2,imm): s.ipc(imm if s.x[rs1]      >= s.x[rs2]      else 4)
+  def BLTU(s,rs1,rs2,imm): s.ipc(imm if s.u(s.x[rs1]) <  s.u(s.x[rs2]) else 4)
+  def BGEU(s,rs1,rs2,imm): s.ipc(imm if s.u(s.x[rs1]) >= s.u(s.x[rs2]) else 4)
 
   # jump
-  def JAL (s,rd,imm): s.x[rd] = s.pc + 4; s.pc += imm; s.x[0] = 0
+  def JAL (s,rd,imm): s.x[rd] = s.pc + 4; s.ipc(imm)
   def JALR(s,rd,rs1,imm): t = s.pc + 4; s.pc = (s.x[rs1] + imm) & ~1; s.x[rd] = t; s.x[0] = 0
 
   # load immediate

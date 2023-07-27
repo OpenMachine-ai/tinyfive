@@ -26,7 +26,7 @@ TinyFive is a lightweight RISC-V emulator and assembler written entirely in Pyth
   - [Example 5: MobileNet](#example-5-mobilenet)
 - [Running in colab](#running-in-colab)
 - [Running without package](#running-without-package)
-- [Contributing](#contributing)
+- [Contribute](#contribute)
 - [Latest status](#latest-status)
 - [Speed](#speed)
 - [Comparison](#comparison)
@@ -442,9 +442,9 @@ If you don't want to run above steps on your local machine, you can run it in a 
 # run test suite
 !python3 tests.py
 ```
-## Contributing
-If you like this project, give it a ⭐ and share it with friends!  And if you are interested in helping make TinyFive better, 
-I highly welcome you to do so. I thank you in advance for your interest.  If you are unsure of what you could do to improve the project, you may have a look [here](https://github.com/OpenMachine-ai/tinyfive/issues/5).  
+## Contribute
+If you like this project, give it a ⭐ and share it with friends!  And if you are interested in helping make TinyFive better,
+I highly welcome you to do so. I thank you in advance for your interest.  If you are unsure of what you could do to improve the project, you may have a look [here](https://github.com/OpenMachine-ai/tinyfive/issues/5).
 
 ## Latest status
 - TinyFive is still under construction, many things haven't been implemented and tested yet.
@@ -475,7 +475,7 @@ The table below compares TinyFive with other [ISS](https://en.wikipedia.org/wiki
 | [mini-rv32ima](https://github.com/cnlohr/mini-rv32ima)             | Charles Lohr         | C         |     | A, I, M, Zifencei, Zicsr   | < 1k |
 
 ## References
-- [HuggingFive :raised_hand_with_fingers_splayed:](https://github.com/OpenMachine-ai/HuggingFive) 
+- [HuggingFive:raised_hand_with_fingers_splayed:](https://github.com/OpenMachine-ai/HuggingFive)
 - Official [RISC-V spec](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
 - See [this RISC-V card](https://inst.eecs.berkeley.edu/~cs61c/fa18/img/riscvcard.pdf) for a brief description of most instructions. See also the [RISC-V reference card](http://riscvbook.com/greencard-20181213.pdf).
 - Book [The RISC-V Reader: An Open Architecture Atlas](https://www.abebooks.com/book-search/author/patterson-david-waterman-andrew/) by David Patterson and Andrew Waterman. Appendix A of this book defines all instructions. The Spanish version of this book is [available for free](http://riscvbook.com/spanish/guia-practica-de-risc-v-1.0.5.pdf),

@@ -9,7 +9,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tinyfive"
-version = "0.0.14"
+version = "0.0.15"
 authors = [
   { name="Open Machine", email="tinyfive@openmachine.ai" },
 ]
