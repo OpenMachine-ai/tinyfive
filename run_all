@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+# Script to run everything and diff it against previous runs
+# Usage: ./run_all
+# Above generates *.log files. After you run it for the very first time, rename
+# these logfiles to *.ref so that subsequent runs are diffed against them
+
+python3 machine.py           2>&1 | tee mach.log
+python3 tests.py             2>&1 | tee test.log
+python3 examples.py          2>&1 | tee exam.log
+python3 layer_examples.py    2>&1 | tee layr.log
+python3 mobilenet_v1_0.25.py 2>&1 | tee mobi.log
+
+echo "--------------------------------------------------------------------------------"
+echo "diff:"
+diff mach.*
+diff test.*
+diff exam.*
+diff layr.*
+diff mobi.*
