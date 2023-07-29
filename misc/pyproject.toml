@@ -9,17 +9,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tinyfive"
-version = "0.0.15"
+# version numbering A.B.C: A is major version, B is minor version, and C is patch
+version = "1.0.0"
 authors = [
-  { name="Open Machine", email="tinyfive@openmachine.ai" },
+  {name="Open Machine", email="tinyfive@openmachine.ai"},
 ]
 description = "TinyFive is a lightweight RISC-V emulator and assembler written entirely in Python"
 readme = "README.md"
 requires-python = ">=3.6"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
   "numpy>1.20.0",
